@@ -220,8 +220,10 @@ async function executeCode(code: string): Promise<{ success: boolean; output: st
     
     await writeFile(join(workDir, "Program.csproj"), csprojContent);
     
+    console.log(`[dotnet] Executing code in ${workDir}`);
     const output = await runCommand("dotnet", ["run", "--project", workDir], 30000);
     const executionTime = Date.now() - startTime;
+    console.log(`[dotnet] Success - stdout: ${output.stdout.substring(0, 200)}`);
     
     return {
       success: true,
@@ -231,10 +233,12 @@ async function executeCode(code: string): Promise<{ success: boolean; output: st
     };
   } catch (error: any) {
     const executionTime = Date.now() - startTime;
+    const fullError = [error.stdout, error.stderr, error.message].filter(Boolean).join('\n');
+    console.log(`[dotnet] Error - code: ${error.code}, stderr: ${error.stderr?.substring(0, 500)}, stdout: ${error.stdout?.substring(0, 500)}`);
     return {
       success: false,
-      output: "",
-      error: error.stderr || error.message || "Execution failed",
+      output: error.stdout || "",
+      error: fullError || "Execution failed",
       executionTime
     };
   } finally {
