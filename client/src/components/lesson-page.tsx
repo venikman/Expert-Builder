@@ -154,7 +154,12 @@ export function LessonPage({
           
           <ResizablePanel defaultSize={60} minSize={40}>
             <ResizablePanelGroup direction="vertical">
-              <ResizablePanel defaultSize={40} minSize={20}>
+              <ResizablePanel 
+                defaultSize={30} 
+                minSize={10} 
+                collapsible 
+                collapsedSize={0}
+              >
                 <AnimationCanvas
                   lessonId={lesson.id}
                   animation={animation}
@@ -164,7 +169,7 @@ export function LessonPage({
               
               <ResizableHandle withHandle />
               
-              <ResizablePanel defaultSize={40} minSize={25}>
+              <ResizablePanel defaultSize={50} minSize={20}>
                 <CodeEditor
                   code={code}
                   onCodeChange={setCode}
@@ -177,7 +182,12 @@ export function LessonPage({
               
               <ResizableHandle withHandle />
               
-              <ResizablePanel defaultSize={20} minSize={15}>
+              <ResizablePanel 
+                defaultSize={20} 
+                minSize={10} 
+                collapsible 
+                collapsedSize={0}
+              >
                 <OutputPanel
                   consoleLines={consoleLines}
                   testResult={testResult}
