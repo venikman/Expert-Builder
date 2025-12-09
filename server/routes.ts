@@ -379,11 +379,19 @@ async function runSingleTest(
   }
 }
 
+function removeMainMethod(code: string): string {
+  // Remove the Main method from the user's code to avoid duplicate Main methods
+  // This regex matches "public static void Main()" and its body
+  const mainMethodRegex = /\s*public\s+static\s+void\s+Main\s*\([^)]*\)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/gs;
+  return code.replace(mainMethodRegex, '');
+}
+
 function generatePureFunctionTest(code: string, input: number, expected: number): string {
   const classMatch = code.match(/public\s+class\s+(\w+)/);
   const className = classMatch ? classMatch[1] : "Exercise";
+  const cleanCode = removeMainMethod(code);
   
-  return `${code}
+  return `${cleanCode}
 
 public class TestRunner
 {
@@ -408,8 +416,9 @@ public class TestRunner
 function generateMapFilterTest(code: string, input: number[], expected: number[]): string {
   const inputStr = input.length > 0 ? input.join(", ") : "";
   const expectedStr = JSON.stringify(expected);
+  const cleanCode = removeMainMethod(code);
   
-  return `${code}
+  return `${cleanCode}
 
 public class TestRunner
 {
@@ -446,8 +455,9 @@ Func<int, int> identity = x => x;
   
   const fVar = fName === "double" ? "@double" : fName;
   const gVar = gName === "double" ? "@double" : gName;
+  const cleanCode = removeMainMethod(code);
   
-  return `${code}
+  return `${cleanCode}
 
 public class TestRunner
 {
@@ -475,8 +485,9 @@ public class TestRunner
 function generateOptionTest(code: string, a: number, b: number, expected: string): string {
   const isSome = expected.startsWith("Some");
   const expectedValue = isSome ? expected.match(/Some\((-?\d+)\)/)?.[1] : null;
+  const cleanCode = removeMainMethod(code);
   
-  return `${code}
+  return `${cleanCode}
 
 public class TestRunner
 {
@@ -506,8 +517,9 @@ public class TestRunner
 
 function generateReduceTest(code: string, input: number[], expected: number): string {
   const inputStr = input.length > 0 ? input.join(", ") : "";
+  const cleanCode = removeMainMethod(code);
   
-  return `${code}
+  return `${cleanCode}
 
 public class TestRunner
 {
