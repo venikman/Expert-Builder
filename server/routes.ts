@@ -7,6 +7,7 @@ import { writeFile, mkdir, rm } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import { tmpdir } from "os";
+import { generatePersonalizedHint } from "./ai-tutor";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -81,7 +82,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Lesson not found" });
       }
 
-      const result = await runTests(code, lesson.id, lesson.testCode, lesson.hints as Record<string, string>);
+      const result = await runTests(code, lesson.id, lesson.title, lesson.testCode, lesson.hints as Record<string, string>);
       
       await storage.createSubmission(lessonId, code, result);
       
@@ -207,7 +208,8 @@ async function executeCode(code: string): Promise<{ success: boolean; output: st
 
 async function runTests(
   code: string, 
-  lessonId: string, 
+  lessonId: string,
+  lessonTitle: string,
   testCodeJson: string,
   hints: Record<string, string>
 ): Promise<SubmissionResult> {
@@ -240,8 +242,22 @@ async function runTests(
     } catch {}
   }
   
-  const failedTest = results.find(r => !r.passed);
-  const hint = failedTest ? hints[failedTest.name] : undefined;
+  const failedTests = results.filter(r => !r.passed);
+  let hint: string | undefined;
+  
+  if (failedTests.length > 0) {
+    const firstFailedTest = failedTests[0];
+    const staticHint = hints[firstFailedTest.name];
+    
+    // Generate personalized hint using AI tutor
+    hint = await generatePersonalizedHint({
+      lessonId,
+      lessonTitle,
+      code,
+      failedTests: failedTests.map(t => ({ name: t.name, message: t.message })),
+      staticHint
+    });
+  }
   
   return {
     success: passedCount === tests.length,
