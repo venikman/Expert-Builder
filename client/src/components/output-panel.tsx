@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { ChevronUp, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConsoleOutput } from "@/components/console-output";
 import { TestResults } from "@/components/test-results";
 import type { ConsoleLine, SubmissionResult } from "@shared/schema";
@@ -10,6 +12,8 @@ interface OutputPanelProps {
   onClearConsole: () => void;
   activeTab: "console" | "tests";
   onTabChange: (tab: "console" | "tests") => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export function OutputPanel({
@@ -18,6 +22,8 @@ export function OutputPanel({
   onClearConsole,
   activeTab,
   onTabChange,
+  isCollapsed,
+  onToggleCollapse,
 }: OutputPanelProps) {
   return (
     <div className="h-full flex flex-col">
@@ -26,7 +32,7 @@ export function OutputPanel({
         onValueChange={(v) => onTabChange(v as "console" | "tests")}
         className="h-full flex flex-col"
       >
-        <div className="border-b px-2">
+        <div className="border-b px-2 flex items-center justify-between">
           <TabsList className="h-10 bg-transparent gap-1">
             <TabsTrigger
               value="console"
@@ -54,6 +60,21 @@ export function OutputPanel({
               )}
             </TabsTrigger>
           </TabsList>
+          {onToggleCollapse && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onToggleCollapse}
+                  data-testid="button-toggle-output"
+                >
+                  {isCollapsed ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isCollapsed ? "Expand" : "Collapse"}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
         <TabsContent value="console" className="flex-1 m-0 h-0">
           <ConsoleOutput lines={consoleLines} onClear={onClearConsole} />

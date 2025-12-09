@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle, type ImperativePanelHandle } from "@/components/ui/resizable";
 import { LessonContent } from "@/components/lesson-content";
 import { AnimationCanvas } from "@/components/animation-canvas";
 import { CodeEditor } from "@/components/code-editor";
@@ -31,6 +31,31 @@ export function LessonPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [outputTab, setOutputTab] = useState<"console" | "tests">("console");
   const [mobileTab, setMobileTab] = useState<"lesson" | "canvas" | "editor">("lesson");
+  const [isAnimationCollapsed, setIsAnimationCollapsed] = useState(false);
+  const [isOutputCollapsed, setIsOutputCollapsed] = useState(false);
+  
+  const animationPanelRef = useRef<ImperativePanelHandle>(null);
+  const outputPanelRef = useRef<ImperativePanelHandle>(null);
+  
+  const toggleAnimationPanel = useCallback(() => {
+    if (isAnimationCollapsed) {
+      animationPanelRef.current?.expand();
+      setIsAnimationCollapsed(false);
+    } else {
+      animationPanelRef.current?.collapse();
+      setIsAnimationCollapsed(true);
+    }
+  }, [isAnimationCollapsed]);
+  
+  const toggleOutputPanel = useCallback(() => {
+    if (isOutputCollapsed) {
+      outputPanelRef.current?.expand();
+      setIsOutputCollapsed(false);
+    } else {
+      outputPanelRef.current?.collapse();
+      setIsOutputCollapsed(true);
+    }
+  }, [isOutputCollapsed]);
 
   useEffect(() => {
     if (lesson?.skeleton) {
@@ -155,15 +180,20 @@ export function LessonPage({
           <ResizablePanel defaultSize={60} minSize={40}>
             <ResizablePanelGroup direction="vertical">
               <ResizablePanel 
+                ref={animationPanelRef}
                 defaultSize={30} 
                 minSize={10} 
                 collapsible 
                 collapsedSize={0}
+                onCollapse={() => setIsAnimationCollapsed(true)}
+                onExpand={() => setIsAnimationCollapsed(false)}
               >
                 <AnimationCanvas
                   lessonId={lesson.id}
                   animation={animation}
                   isLoading={isLoadingAnimation}
+                  isCollapsed={isAnimationCollapsed}
+                  onToggleCollapse={toggleAnimationPanel}
                 />
               </ResizablePanel>
               
@@ -183,10 +213,13 @@ export function LessonPage({
               <ResizableHandle withHandle />
               
               <ResizablePanel 
+                ref={outputPanelRef}
                 defaultSize={20} 
                 minSize={10} 
                 collapsible 
                 collapsedSize={0}
+                onCollapse={() => setIsOutputCollapsed(true)}
+                onExpand={() => setIsOutputCollapsed(false)}
               >
                 <OutputPanel
                   consoleLines={consoleLines}
@@ -194,6 +227,8 @@ export function LessonPage({
                   onClearConsole={handleClearConsole}
                   activeTab={outputTab}
                   onTabChange={setOutputTab}
+                  isCollapsed={isOutputCollapsed}
+                  onToggleCollapse={toggleOutputPanel}
                 />
               </ResizablePanel>
             </ResizablePanelGroup>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, SkipBack, SkipForward, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
@@ -10,6 +10,8 @@ interface AnimationCanvasProps {
   lessonId: string;
   animation: LessonAnimation | null;
   isLoading: boolean;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 interface AnimationShape {
@@ -24,7 +26,7 @@ interface AnimationShape {
   highlighted?: boolean;
 }
 
-export function AnimationCanvas({ lessonId, animation, isLoading }: AnimationCanvasProps) {
+export function AnimationCanvas({ lessonId, animation, isLoading, isCollapsed, onToggleCollapse }: AnimationCanvasProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [shapes, setShapes] = useState<AnimationShape[]>([]);
@@ -303,6 +305,25 @@ export function AnimationCanvas({ lessonId, animation, isLoading }: AnimationCan
             </TooltipTrigger>
             <TooltipContent>Reset</TooltipContent>
           </Tooltip>
+          
+          {onToggleCollapse && (
+            <>
+              <div className="w-px h-5 bg-border mx-1" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onToggleCollapse}
+                    data-testid="button-toggle-animation"
+                  >
+                    {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{isCollapsed ? "Expand" : "Collapse"}</TooltipContent>
+              </Tooltip>
+            </>
+          )}
         </div>
       </div>
 
