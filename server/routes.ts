@@ -81,7 +81,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Lesson not found" });
       }
 
-      const result = await runTests(code, lesson.id, lesson.testCode, lesson.hints);
+      const result = await runTests(code, lesson.id, lesson.testCode, lesson.hints as Record<string, string>);
       
       await storage.createSubmission(lessonId, code, result);
       

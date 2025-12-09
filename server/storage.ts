@@ -1,18 +1,180 @@
-import { type User, type InsertUser, type Lesson, type LessonAnimation, type Submission, type SubmissionResult } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { 
+  users, lessons, lessonAnimations, submissions, learnerProgress,
+  type User, type InsertUser, type Lesson, type InsertLesson,
+  type LessonAnimation, type LessonAnimationRow, type InsertLessonAnimation,
+  type SubmissionRow, type InsertSubmission, type SubmissionResult,
+  type LearnerProgress, type InsertLearnerProgress
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getLessons(): Promise<Lesson[]>;
   getLesson(id: string): Promise<Lesson | undefined>;
+  createLesson(lesson: InsertLesson): Promise<Lesson>;
+  updateLesson(id: string, lesson: Partial<InsertLesson>): Promise<Lesson | undefined>;
+  deleteLesson(id: string): Promise<boolean>;
   getLessonAnimation(lessonId: string): Promise<LessonAnimation | undefined>;
-  createSubmission(lessonId: string, code: string, result: SubmissionResult): Promise<Submission>;
-  getSubmissions(lessonId: string): Promise<Submission[]>;
+  createLessonAnimation(animation: InsertLessonAnimation): Promise<LessonAnimationRow>;
+  updateLessonAnimation(lessonId: string, animation: Partial<InsertLessonAnimation>): Promise<LessonAnimationRow | undefined>;
+  createSubmission(lessonId: string, code: string, result: SubmissionResult, userId?: number): Promise<SubmissionRow>;
+  getSubmissions(lessonId: string): Promise<SubmissionRow[]>;
+  getUserSubmissions(userId: number): Promise<SubmissionRow[]>;
+  getLearnerProgress(userId: number): Promise<LearnerProgress[]>;
+  getLessonProgress(userId: number, lessonId: string): Promise<LearnerProgress | undefined>;
+  updateLearnerProgress(userId: number, lessonId: string, data: Partial<InsertLearnerProgress>): Promise<LearnerProgress>;
 }
 
-const lessons: Lesson[] = [
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async getLessons(): Promise<Lesson[]> {
+    const result = await db.select().from(lessons).orderBy(lessons.order);
+    return result;
+  }
+
+  async getLesson(id: string): Promise<Lesson | undefined> {
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, id));
+    return lesson || undefined;
+  }
+
+  async createLesson(lesson: InsertLesson): Promise<Lesson> {
+    const [created] = await db.insert(lessons).values(lesson).returning();
+    return created;
+  }
+
+  async updateLesson(id: string, lesson: Partial<InsertLesson>): Promise<Lesson | undefined> {
+    const [updated] = await db
+      .update(lessons)
+      .set({ ...lesson, updatedAt: new Date() })
+      .where(eq(lessons.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteLesson(id: string): Promise<boolean> {
+    const result = await db.delete(lessons).where(eq(lessons.id, id));
+    return true;
+  }
+
+  async getLessonAnimation(lessonId: string): Promise<LessonAnimation | undefined> {
+    const [animation] = await db
+      .select()
+      .from(lessonAnimations)
+      .where(eq(lessonAnimations.lessonId, lessonId));
+    
+    if (!animation) return undefined;
+    
+    return {
+      sceneData: animation.sceneData as Record<string, any>,
+      steps: animation.steps as any[],
+    };
+  }
+
+  async createLessonAnimation(animation: InsertLessonAnimation): Promise<LessonAnimationRow> {
+    const [created] = await db.insert(lessonAnimations).values(animation).returning();
+    return created;
+  }
+
+  async updateLessonAnimation(lessonId: string, animation: Partial<InsertLessonAnimation>): Promise<LessonAnimationRow | undefined> {
+    const [updated] = await db
+      .update(lessonAnimations)
+      .set(animation)
+      .where(eq(lessonAnimations.lessonId, lessonId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async createSubmission(lessonId: string, code: string, result: SubmissionResult, userId?: number): Promise<SubmissionRow> {
+    const [submission] = await db
+      .insert(submissions)
+      .values({
+        lessonId,
+        code,
+        result,
+        userId: userId || null,
+      })
+      .returning();
+    return submission;
+  }
+
+  async getSubmissions(lessonId: string): Promise<SubmissionRow[]> {
+    return db
+      .select()
+      .from(submissions)
+      .where(eq(submissions.lessonId, lessonId))
+      .orderBy(desc(submissions.submittedAt));
+  }
+
+  async getUserSubmissions(userId: number): Promise<SubmissionRow[]> {
+    return db
+      .select()
+      .from(submissions)
+      .where(eq(submissions.userId, userId))
+      .orderBy(desc(submissions.submittedAt));
+  }
+
+  async getLearnerProgress(userId: number): Promise<LearnerProgress[]> {
+    return db
+      .select()
+      .from(learnerProgress)
+      .where(eq(learnerProgress.userId, userId));
+  }
+
+  async getLessonProgress(userId: number, lessonId: string): Promise<LearnerProgress | undefined> {
+    const [progress] = await db
+      .select()
+      .from(learnerProgress)
+      .where(and(
+        eq(learnerProgress.userId, userId),
+        eq(learnerProgress.lessonId, lessonId)
+      ));
+    return progress || undefined;
+  }
+
+  async updateLearnerProgress(userId: number, lessonId: string, data: Partial<InsertLearnerProgress>): Promise<LearnerProgress> {
+    const existing = await this.getLessonProgress(userId, lessonId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(learnerProgress)
+        .set(data)
+        .where(eq(learnerProgress.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db
+      .insert(learnerProgress)
+      .values({
+        userId,
+        lessonId,
+        ...data,
+      })
+      .returning();
+    return created;
+  }
+}
+
+export const storage = new DatabaseStorage();
+
+const seedLessons: InsertLesson[] = [
   {
     id: "pure-functions",
     title: "Pure Functions",
@@ -540,8 +702,9 @@ public class Exercise
   },
 ];
 
-const animations: Record<string, LessonAnimation> = {
-  "pure-functions": {
+const seedAnimations: InsertLessonAnimation[] = [
+  {
+    lessonId: "pure-functions",
     sceneData: {
       shapes: [
         { id: "input-box", type: "box", x: 50, y: 120, width: 60, height: 40, label: "5", color: "rgba(59, 130, 246, 0.2)" },
@@ -563,7 +726,8 @@ const animations: Record<string, LessonAnimation> = {
       { type: "highlight", target: "note", duration: 1000 },
     ],
   },
-  "map-filter": {
+  {
+    lessonId: "map-filter",
     sceneData: {
       shapes: [
         { id: "input-label", type: "text", x: 60, y: 40, width: 0, height: 0, label: "Input: [1, 2, 3, 4, 5, 6]", color: "" },
@@ -602,7 +766,8 @@ const animations: Record<string, LessonAnimation> = {
       { type: "highlight", target: "r-box3", duration: 300 },
     ],
   },
-  "function-composition": {
+  {
+    lessonId: "function-composition",
     sceneData: {
       shapes: [
         { id: "title", type: "text", x: 200, y: 30, width: 0, height: 0, label: "Compose(f, g)(x) = f(g(x))", color: "" },
@@ -630,15 +795,16 @@ const animations: Record<string, LessonAnimation> = {
       { type: "highlight", target: "output", duration: 600 },
     ],
   },
-  "option-type": {
+  {
+    lessonId: "option-type",
     sceneData: {
       shapes: [
-        { id: "title", type: "text", x: 200, y: 30, width: 0, height: 0, label: "Option<T>: Safe Null Handling", color: "" },
-        { id: "some-box", type: "function", x: 50, y: 80, width: 120, height: 60, label: "Some(value)", color: "rgba(34, 197, 94, 0.2)" },
-        { id: "none-box", type: "function", x: 230, y: 80, width: 120, height: 60, label: "None", color: "rgba(239, 68, 68, 0.2)" },
-        { id: "divide-fn", type: "function", x: 140, y: 170, width: 120, height: 50, label: "SafeDivide", color: "rgba(59, 130, 246, 0.2)" },
-        { id: "case1-label", type: "text", x: 100, y: 250, width: 0, height: 0, label: "10 ÷ 2 = Some(5)", color: "" },
-        { id: "case2-label", type: "text", x: 300, y: 250, width: 0, height: 0, label: "10 ÷ 0 = None", color: "" },
+        { id: "title", type: "text", x: 200, y: 30, width: 0, height: 0, label: "Option<T>: Safe null handling", color: "" },
+        { id: "some-box", type: "box", x: 80, y: 80, width: 120, height: 60, label: "Some(value)", color: "rgba(34, 197, 94, 0.2)" },
+        { id: "none-box", type: "box", x: 220, y: 80, width: 120, height: 60, label: "None", color: "rgba(239, 68, 68, 0.2)" },
+        { id: "divide-fn", type: "function", x: 150, y: 180, width: 120, height: 50, label: "SafeDivide", color: "rgba(59, 130, 246, 0.2)" },
+        { id: "case1", type: "text", x: 100, y: 260, width: 0, height: 0, label: "10 / 2 → Some(5)", color: "" },
+        { id: "case2", type: "text", x: 280, y: 260, width: 0, height: 0, label: "10 / 0 → None", color: "" },
       ],
     },
     steps: [
@@ -646,105 +812,63 @@ const animations: Record<string, LessonAnimation> = {
       { type: "highlight", target: "some-box", duration: 800 },
       { type: "highlight", target: "none-box", duration: 800 },
       { type: "highlight", target: "divide-fn", duration: 1000 },
-      { type: "highlight", target: "case1-label", duration: 800 },
-      { type: "highlight", target: "case2-label", duration: 800 },
+      { type: "highlight", target: "case1", duration: 800 },
+      { type: "highlight", target: "case2", duration: 800 },
     ],
   },
-  "reduce-fold": {
+  {
+    lessonId: "reduce-fold",
     sceneData: {
       shapes: [
-        { id: "title", type: "text", x: 200, y: 25, width: 0, height: 0, label: "Aggregate: Reduce to Single Value", color: "" },
-        { id: "input-label", type: "text", x: 100, y: 55, width: 0, height: 0, label: "[1, 2, 3, 4, 5]", color: "" },
-        { id: "box1", type: "box", x: 30, y: 70, width: 35, height: 30, label: "1", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "box2", type: "box", x: 70, y: 70, width: 35, height: 30, label: "2", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "box3", type: "box", x: 110, y: 70, width: 35, height: 30, label: "3", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "box4", type: "box", x: 150, y: 70, width: 35, height: 30, label: "4", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "box5", type: "box", x: 190, y: 70, width: 35, height: 30, label: "5", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "acc-fn", type: "function", x: 270, y: 65, width: 100, height: 40, label: "acc * n", color: "rgba(34, 197, 94, 0.2)" },
-        { id: "step1", type: "text", x: 100, y: 130, width: 0, height: 0, label: "1 × 1 = 1", color: "" },
-        { id: "step2", type: "text", x: 100, y: 155, width: 0, height: 0, label: "1 × 2 = 2", color: "" },
-        { id: "step3", type: "text", x: 100, y: 180, width: 0, height: 0, label: "2 × 3 = 6", color: "" },
-        { id: "step4", type: "text", x: 100, y: 205, width: 0, height: 0, label: "6 × 4 = 24", color: "" },
-        { id: "step5", type: "text", x: 100, y: 230, width: 0, height: 0, label: "24 × 5 = 120", color: "" },
-        { id: "result", type: "box", x: 250, y: 195, width: 80, height: 50, label: "120", color: "rgba(168, 85, 247, 0.3)" },
+        { id: "title", type: "text", x: 200, y: 30, width: 0, height: 0, label: "Aggregate: Reduce to single value", color: "" },
+        { id: "input-label", type: "text", x: 60, y: 60, width: 0, height: 0, label: "Input: [1, 2, 3, 4, 5]", color: "" },
+        { id: "acc-0", type: "box", x: 30, y: 100, width: 60, height: 30, label: "acc=1", color: "rgba(156, 163, 175, 0.3)" },
+        { id: "step1", type: "text", x: 120, y: 110, width: 0, height: 0, label: "× 1 = 1", color: "" },
+        { id: "acc-1", type: "box", x: 30, y: 140, width: 60, height: 30, label: "acc=1", color: "rgba(156, 163, 175, 0.3)" },
+        { id: "step2", type: "text", x: 120, y: 150, width: 0, height: 0, label: "× 2 = 2", color: "" },
+        { id: "acc-2", type: "box", x: 30, y: 180, width: 60, height: 30, label: "acc=2", color: "rgba(59, 130, 246, 0.3)" },
+        { id: "step3", type: "text", x: 120, y: 190, width: 0, height: 0, label: "× 3 = 6", color: "" },
+        { id: "acc-3", type: "box", x: 30, y: 220, width: 60, height: 30, label: "acc=6", color: "rgba(59, 130, 246, 0.3)" },
+        { id: "step4", type: "text", x: 120, y: 230, width: 0, height: 0, label: "× 4 = 24", color: "" },
+        { id: "acc-4", type: "box", x: 30, y: 260, width: 60, height: 30, label: "acc=24", color: "rgba(59, 130, 246, 0.3)" },
+        { id: "step5", type: "text", x: 120, y: 270, width: 0, height: 0, label: "× 5 = 120", color: "" },
+        { id: "result", type: "box", x: 200, y: 260, width: 80, height: 40, label: "120", color: "rgba(168, 85, 247, 0.3)" },
       ],
     },
     steps: [
       { type: "highlight", target: "title", duration: 800 },
       { type: "highlight", target: "input-label", duration: 600 },
-      { type: "highlight", target: "acc-fn", duration: 800 },
-      { type: "highlight", target: "box1", duration: 400 },
-      { type: "highlight", target: "step1", duration: 500 },
-      { type: "highlight", target: "box2", duration: 400 },
-      { type: "highlight", target: "step2", duration: 500 },
-      { type: "highlight", target: "box3", duration: 400 },
-      { type: "highlight", target: "step3", duration: 500 },
-      { type: "highlight", target: "box4", duration: 400 },
-      { type: "highlight", target: "step4", duration: 500 },
-      { type: "highlight", target: "box5", duration: 400 },
-      { type: "highlight", target: "step5", duration: 500 },
+      { type: "highlight", target: "acc-0", duration: 400 },
+      { type: "highlight", target: "step1", duration: 400 },
+      { type: "highlight", target: "acc-1", duration: 400 },
+      { type: "highlight", target: "step2", duration: 400 },
+      { type: "highlight", target: "acc-2", duration: 400 },
+      { type: "highlight", target: "step3", duration: 400 },
+      { type: "highlight", target: "acc-3", duration: 400 },
+      { type: "highlight", target: "step4", duration: 400 },
+      { type: "highlight", target: "acc-4", duration: 400 },
+      { type: "highlight", target: "step5", duration: 400 },
       { type: "highlight", target: "result", duration: 800 },
     ],
   },
-};
+];
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private submissions: Map<string, Submission[]>;
-
-  constructor() {
-    this.users = new Map();
-    this.submissions = new Map();
+export async function seedDatabase(): Promise<void> {
+  const existingLessons = await db.select().from(lessons);
+  if (existingLessons.length > 0) {
+    console.log("Database already seeded, skipping...");
+    return;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  console.log("Seeding database with lessons and animations...");
+
+  for (const lesson of seedLessons) {
+    await db.insert(lessons).values(lesson);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  for (const animation of seedAnimations) {
+    await db.insert(lessonAnimations).values(animation);
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
-  }
-
-  async getLessons(): Promise<Lesson[]> {
-    return [...lessons].sort((a, b) => a.order - b.order);
-  }
-
-  async getLesson(id: string): Promise<Lesson | undefined> {
-    return lessons.find((l) => l.id === id);
-  }
-
-  async getLessonAnimation(lessonId: string): Promise<LessonAnimation | undefined> {
-    return animations[lessonId];
-  }
-
-  async createSubmission(lessonId: string, code: string, result: SubmissionResult): Promise<Submission> {
-    const submission: Submission = {
-      id: randomUUID(),
-      lessonId,
-      code,
-      result,
-      submittedAt: new Date().toISOString(),
-    };
-
-    const existing = this.submissions.get(lessonId) || [];
-    existing.push(submission);
-    this.submissions.set(lessonId, existing);
-
-    return submission;
-  }
-
-  async getSubmissions(lessonId: string): Promise<Submission[]> {
-    return this.submissions.get(lessonId) || [];
-  }
+  console.log("Database seeded successfully!");
 }
-
-export const storage = new MemStorage();
