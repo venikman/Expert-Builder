@@ -1,5 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Lesson } from "@shared/schema";
@@ -49,12 +51,22 @@ export function LessonContent({ lesson }: LessonContentProps) {
                   );
                 }
                 
+                const language = match ? match[1] : "text";
+                const codeString = String(children).replace(/\n$/, "");
+                
                 return (
-                  <pre className="bg-muted rounded-lg p-4 overflow-x-auto">
-                    <code className="text-sm font-mono" {...props}>
-                      {children}
-                    </code>
-                  </pre>
+                  <SyntaxHighlighter
+                    style={oneDark}
+                    language={language === "csharp" ? "csharp" : language}
+                    PreTag="div"
+                    customStyle={{
+                      margin: 0,
+                      borderRadius: "0.5rem",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    {codeString}
+                  </SyntaxHighlighter>
                 );
               },
               pre: ({ children }) => <>{children}</>,
