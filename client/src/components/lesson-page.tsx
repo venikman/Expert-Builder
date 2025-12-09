@@ -7,7 +7,7 @@ import { OutputPanel } from "@/components/output-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Lesson, LessonAnimation, ConsoleLine, SubmissionResult, ExecuteResult } from "@shared/schema";
 
 interface LessonPageProps {
@@ -96,6 +96,9 @@ export function LessonPage({
 
       setTestResult(result);
       setOutputTab("tests");
+
+      // Invalidate progress cache to update UI
+      queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
 
       if (result.success) {
         toast({

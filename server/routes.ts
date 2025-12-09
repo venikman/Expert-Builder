@@ -86,6 +86,22 @@ export async function registerRoutes(
       
       await storage.createSubmission(lessonId, code, result);
       
+      // Update learner progress (using demo user ID = 1)
+      const DEMO_USER_ID = 1;
+      const currentProgress = await storage.getLessonProgress(DEMO_USER_ID, lessonId);
+      const currentScore = Math.round((result.passedTests / result.totalTests) * 100);
+      const bestScore = Math.max(currentProgress?.bestScore || 0, currentScore);
+      const attempts = (currentProgress?.attempts || 0) + 1;
+      const isCompleted = result.success;
+      
+      await storage.updateLearnerProgress(DEMO_USER_ID, lessonId, {
+        completed: isCompleted || currentProgress?.completed || false,
+        bestScore,
+        attempts,
+        lastAttemptAt: new Date(),
+        ...(isCompleted && !currentProgress?.completedAt ? { completedAt: new Date() } : {}),
+      });
+      
       res.json(result);
     } catch (error) {
       res.status(500).json({ 
@@ -155,6 +171,28 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete lesson" });
+    }
+  });
+
+  // Progress tracking API routes
+  // For now using userId=1 as demo user since no auth is implemented
+  const DEMO_USER_ID = 1;
+
+  app.get("/api/progress", async (req, res) => {
+    try {
+      const progress = await storage.getLearnerProgress(DEMO_USER_ID);
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch progress" });
+    }
+  });
+
+  app.get("/api/progress/:lessonId", async (req, res) => {
+    try {
+      const progress = await storage.getLessonProgress(DEMO_USER_ID, req.params.lessonId);
+      res.json(progress || { completed: false, bestScore: 0, attempts: 0 });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch lesson progress" });
     }
   });
 
