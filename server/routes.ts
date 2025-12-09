@@ -9,6 +9,9 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { generatePersonalizedHint } from "./ai-tutor";
 
+// Demo user ID for progress tracking (no auth implemented)
+const DEMO_USER_ID = 1;
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -85,9 +88,7 @@ export async function registerRoutes(
       const result = await runTests(code, lesson.id, lesson.title, lesson.testCode, lesson.hints as Record<string, string>);
       
       await storage.createSubmission(lessonId, code, result);
-      
-      // Update learner progress (using demo user ID = 1)
-      const DEMO_USER_ID = 1;
+
       const currentProgress = await storage.getLessonProgress(DEMO_USER_ID, lessonId);
       const currentScore = Math.round((result.passedTests / result.totalTests) * 100);
       const bestScore = Math.max(currentProgress?.bestScore || 0, currentScore);
@@ -174,10 +175,6 @@ export async function registerRoutes(
     }
   });
 
-  // Progress tracking API routes
-  // For now using userId=1 as demo user since no auth is implemented
-  const DEMO_USER_ID = 1;
-
   app.get("/api/progress", async (req, res) => {
     try {
       const progress = await storage.getLearnerProgress(DEMO_USER_ID);
@@ -212,7 +209,7 @@ async function executeCode(code: string): Promise<{ success: boolean; output: st
     const csprojContent = `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -244,7 +241,9 @@ async function executeCode(code: string): Promise<{ success: boolean; output: st
   } finally {
     try {
       await rm(workDir, { recursive: true, force: true });
-    } catch {}
+    } catch {
+      // Cleanup failure is non-critical; temp dir will be purged by OS
+    }
   }
 }
 
@@ -281,9 +280,11 @@ async function runTests(
   } finally {
     try {
       await rm(workDir, { recursive: true, force: true });
-    } catch {}
+    } catch {
+      // Cleanup failure is non-critical; temp dir will be purged by OS
+    }
   }
-  
+
   const failedTests = results.filter(r => !r.passed);
   let hint: string | undefined;
   
@@ -347,7 +348,7 @@ async function runSingleTest(
     const csprojContent = `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -375,7 +376,9 @@ async function runSingleTest(
   } finally {
     try {
       await rm(testDir, { recursive: true, force: true });
-    } catch {}
+    } catch {
+      // Cleanup failure is non-critical; temp dir will be purged by OS
+    }
   }
 }
 

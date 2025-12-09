@@ -64,12 +64,13 @@ app.use((req, res, next) => {
   await seedDatabase();
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    const error = err as { status?: number; statusCode?: number; message?: string };
+    const status = error.status || error.statusCode || 500;
+    const message = error.message || "Internal Server Error";
 
+    log(`Error: ${message} (${status})`);
     res.status(status).json({ message });
-    throw err;
   });
 
   // importantly only setup vite in development and after
@@ -87,14 +88,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  httpServer.listen(port, "localhost", () => {
+    log(`serving on port ${port}`);
+  });
 })();
