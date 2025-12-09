@@ -1,0 +1,119 @@
+You are an expert full‑stack engineer building a Replit‑native auto‑graded learning platform for modern C# in a functional programming (FP) style.
+
+GOAL
+Build a minimal vertical slice:
+- Instructor can define 3 to 5 FP‑oriented C# exercises.
+- Learner can open a lesson, see an animation of the concept, edit a single C# code buffer with LSP support, run code, and see graded results.
+- All of this must run as a Replit app with proper deployments.
+
+SCOPE FOR V1
+1) Lessons and curriculum
+- Focus on FP‑style C#: pure functions, immutability, small function composition, LINQ, Option/Either style patterns (you can stub a minimal Option type instead of pulling big libs).
+- Each lesson has:
+  - Metadata: id, title, concept tag (e.g. “pure functions”, “map/filter”, “Option type”).
+  - Markdown description with examples.
+  - A tldraw animation spec keyed by lesson id.
+  - A C# exercise skeleton for the learner plus a hidden reference solution.
+  - A test suite (C# unit tests) that validates the learner’s code.
+
+2) Learner experience
+- Single page layout:
+  - Left: lesson title, concept tags, Markdown description, “watch animation” button.
+  - Top right: embedded tldraw canvas showing the concept animation.
+  - Bottom right: C# editor + console output and test results.
+- Editor:
+  - Single in‑memory buffer only from the learner’s perspective (no visible file tree).
+  - C# syntax highlighting, auto‑indentation, basic bracket/paren matching.
+  - LSP integration for C#: completion, diagnostics on save or on type, hover type info.
+- Execution:
+  - “Run” compiles and runs the current buffer, prints stdout/stderr to the console pane.
+  - “Submit” runs the hidden test suite against the learner’s code.
+  - Show pass/fail per test and a short summary (e.g. “3/5 tests passed”).
+
+3) Auto‑grading pipeline
+- Represent each exercise as:
+  - Public signature the learner must implement (for example, `static int Sum(List<int> xs)`).
+  - Hidden reference implementation used for generating expected outputs if needed.
+  - Test cases defined as ordinary C# tests.
+- When learner hits “Submit”:
+  - Backend wraps the learner’s code into a fixed template that:
+    - Inserts their buffer into a known namespace/class.
+    - Links against a test project that calls their functions.
+  - Compile and run tests in an isolated sandbox.
+  - Collect results and return a small JSON structure to the frontend:
+    - Per‑test name, status (pass/fail), and optional short message.
+  - Persist submission, results, and timestamp in the database for future analytics.
+
+4) tldraw animation integration
+- Use the tldraw React SDK (`<Tldraw />`) to embed an infinite canvas view into the lesson page.
+- For each lesson:
+  - Load a predefined tldraw document or JSON scene from storage keyed by lesson id.
+  - Implement a simple “play” function that:
+    - Steps through a sequence of camera moves and shape highlights to explain the concept.
+    - Example: show data flowing through map/filter as arrows over a list of boxes.
+- Keep the API surface minimal:
+  - One hook or function to load a scene and one to play a scripted sequence.
+
+5) Tech stack and architecture
+- Frontend:
+  - React + TypeScript SPA.
+  - Editor: use Monaco or CodeMirror with C# language mode.
+  - Wire LSP over WebSocket to the backend:
+    - Backend runs or proxies a C# language server (for example, csharp‑ls or Roslyn‑based) and speaks the standard Language Server Protocol.
+- Backend:
+  - HTTP API implemented in any server stack that runs well on Replit.
+  - Endpoints:
+    - `GET /lessons` and `GET /lessons/{id}` for curriculum.
+    - `GET /lessons/{id}/animation` returns tldraw scene JSON.
+    - `POST /execute` compiles and runs learner buffer in a sandbox and streams stdout.
+    - `POST /submit` runs the test suite and returns grading results.
+- Storage:
+  - Use Replit’s built‑in database or Postgres for lesson metadata and submissions.
+  - Use object storage (App Storage) for tldraw scenes and, if needed, build artifacts.
+
+6) Replit‑specific deployment
+- Deploy the web/API as a single autoscale Replit deployment that:
+  - Serves the SPA frontend.
+  - Exposes the backend API and WebSocket endpoint for LSP and execution.
+- If necessary, use a second deployment for a long‑running C# language server, but aim for a single service first.
+- Add basic logging and error handling so we can inspect:
+  - Compile errors.
+  - Runtime exceptions.
+  - LSP failures.
+
+7) AI tutor hooks (stub in v1)
+- Define clear interfaces (API endpoints or internal functions) that later allow an AI agent to:
+  - Read the learner’s last submission and the test failures.
+  - Generate a textual explanation of what went wrong.
+- For v1, just:
+  - Return a deterministic, hand‑coded hint string per test failure.
+  - Document where an AI call would plug in.
+
+8) UX and constraints
+- Assume mid‑level learners who know basic C# syntax but not FP style.
+- Optimize for fast feedback:
+  - End to end “type code → run tests → see results” should target under 2 seconds for normal cases.
+- Do not expose the file system or build pipeline to the learner.
+- Prefer pure functions and stateless tests; avoid exercises that require I/O or global state.
+
+DELIVERABLES
+- Working Replit app with:
+  - Functional SPA frontend and backend API.
+  - At least 3 fully wired lessons, each with:
+    - Markdown content.
+    - tldraw animation.
+    - C# exercise and passing reference solution.
+    - Hidden tests.
+- Clear instructions in README:
+  - How to add a new lesson.
+  - How to modify the tldraw animation for a lesson.
+  - How to run and deploy in Replit.
+
+QUALITY BAR
+- Code should be organized so that:
+  - Adding new lessons is mostly data entry, not code changes.
+  - Swapping the C# LSP implementation or execution backend is localized.
+- Include automated tests for:
+  - The exercise compilation and grading pipeline.
+  - At least one API endpoint.
+Assumptions: You will run C# compilation and tests in a Linux container and are okay with creating temporary files behind the scenes even though the learner sees only a single buffer. Model: Thin React SPA + API + sandboxed C# compile/run; lessons and scenes are data. Options: (A) Single deployment for API + LSP + compile; (B) Separate LSP or worker service. Pick: Start with (A); split into separate services only if response time or memory is a problem. Tests: Measure median “submit → graded result” time and log slow paths; add one load test for 50 parallel submissions.
