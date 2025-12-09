@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { executeRequestSchema, submitRequestSchema, type SubmissionResult, type TestResult } from "@shared/schema";
+import { executeRequestSchema, submitRequestSchema, insertLessonSchema, type SubmissionResult, type TestResult } from "@shared/schema";
 import { spawn } from "child_process";
 import { writeFile, mkdir, rm } from "fs/promises";
 import { join } from "path";
@@ -94,6 +94,66 @@ export async function registerRoutes(
         results: [],
         hint: error instanceof Error ? error.message : "Grading failed"
       });
+    }
+  });
+
+  // Instructor API routes - return full lesson data including solutions and tests
+  app.get("/api/instructor/lessons", async (req, res) => {
+    try {
+      const lessons = await storage.getLessons();
+      res.json(lessons);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch lessons" });
+    }
+  });
+
+  app.get("/api/instructor/lessons/:id", async (req, res) => {
+    try {
+      const lesson = await storage.getLesson(req.params.id);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      res.json(lesson);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch lesson" });
+    }
+  });
+
+  app.post("/api/instructor/lessons", async (req, res) => {
+    try {
+      const parsed = insertLessonSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request", details: parsed.error.errors });
+      }
+      const lesson = await storage.createLesson(parsed.data);
+      res.status(201).json(lesson);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create lesson" });
+    }
+  });
+
+  app.patch("/api/instructor/lessons/:id", async (req, res) => {
+    try {
+      const parsed = insertLessonSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request", details: parsed.error.errors });
+      }
+      const lesson = await storage.updateLesson(req.params.id, parsed.data);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      res.json(lesson);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update lesson" });
+    }
+  });
+
+  app.delete("/api/instructor/lessons/:id", async (req, res) => {
+    try {
+      await storage.deleteLesson(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete lesson" });
     }
   });
 

@@ -1,4 +1,5 @@
-import { Code2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Code2, ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -63,6 +64,11 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
       </div>
 
       <div className="flex items-center gap-2">
+        <Link href="/instructor">
+          <Button variant="ghost" size="icon" data-testid="button-instructor">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </Link>
         <ThemeToggle />
       </div>
     </header>
