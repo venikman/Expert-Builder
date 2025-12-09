@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { ChevronDown, ChevronUp, Play, Terminal } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, type ImperativePanelHandle } from "@/components/ui/resizable";
+import { Button } from "@/components/ui/button";
 import { LessonContent } from "@/components/lesson-content";
 import { AnimationCanvas } from "@/components/animation-canvas";
 import { CodeEditor } from "@/components/code-editor";
@@ -178,60 +180,90 @@ export function LessonPage({
           <ResizableHandle withHandle />
           
           <ResizablePanel defaultSize={60} minSize={40}>
-            <ResizablePanelGroup direction="vertical">
-              <ResizablePanel 
-                ref={animationPanelRef}
-                defaultSize={30} 
-                minSize={10} 
-                collapsible 
-                collapsedSize={0}
-                onCollapse={() => setIsAnimationCollapsed(true)}
-                onExpand={() => setIsAnimationCollapsed(false)}
-              >
-                <AnimationCanvas
-                  lessonId={lesson.id}
-                  animation={animation}
-                  isLoading={isLoadingAnimation}
-                  isCollapsed={isAnimationCollapsed}
-                  onToggleCollapse={toggleAnimationPanel}
-                />
-              </ResizablePanel>
+            <div className="h-full flex flex-col">
+              {isAnimationCollapsed && (
+                <button
+                  onClick={toggleAnimationPanel}
+                  className="flex items-center justify-between px-3 py-1.5 border-b bg-muted/30 hover-elevate text-sm text-muted-foreground"
+                  data-testid="button-expand-animation"
+                >
+                  <span className="flex items-center gap-2">
+                    <Play className="h-3 w-3" />
+                    Animation
+                  </span>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              )}
               
-              <ResizableHandle withHandle />
+              <ResizablePanelGroup direction="vertical" className="flex-1">
+                <ResizablePanel 
+                  ref={animationPanelRef}
+                  defaultSize={isAnimationCollapsed ? 0 : 30} 
+                  minSize={10} 
+                  collapsible 
+                  collapsedSize={0}
+                  onCollapse={() => setIsAnimationCollapsed(true)}
+                  onExpand={() => setIsAnimationCollapsed(false)}
+                >
+                  <AnimationCanvas
+                    lessonId={lesson.id}
+                    animation={animation}
+                    isLoading={isLoadingAnimation}
+                    isCollapsed={isAnimationCollapsed}
+                    onToggleCollapse={toggleAnimationPanel}
+                  />
+                </ResizablePanel>
+                
+                <ResizableHandle withHandle />
+                
+                <ResizablePanel defaultSize={50} minSize={20}>
+                  <CodeEditor
+                    code={code}
+                    onCodeChange={setCode}
+                    onRun={handleRun}
+                    onSubmit={handleSubmit}
+                    isRunning={isRunning}
+                    isSubmitting={isSubmitting}
+                  />
+                </ResizablePanel>
+                
+                <ResizableHandle withHandle />
+                
+                <ResizablePanel 
+                  ref={outputPanelRef}
+                  defaultSize={isOutputCollapsed ? 0 : 20} 
+                  minSize={10} 
+                  collapsible 
+                  collapsedSize={0}
+                  onCollapse={() => setIsOutputCollapsed(true)}
+                  onExpand={() => setIsOutputCollapsed(false)}
+                >
+                  <OutputPanel
+                    consoleLines={consoleLines}
+                    testResult={testResult}
+                    onClearConsole={handleClearConsole}
+                    activeTab={outputTab}
+                    onTabChange={setOutputTab}
+                    isCollapsed={isOutputCollapsed}
+                    onToggleCollapse={toggleOutputPanel}
+                  />
+                </ResizablePanel>
+              </ResizablePanelGroup>
               
-              <ResizablePanel defaultSize={50} minSize={20}>
-                <CodeEditor
-                  code={code}
-                  onCodeChange={setCode}
-                  onRun={handleRun}
-                  onSubmit={handleSubmit}
-                  isRunning={isRunning}
-                  isSubmitting={isSubmitting}
-                />
-              </ResizablePanel>
-              
-              <ResizableHandle withHandle />
-              
-              <ResizablePanel 
-                ref={outputPanelRef}
-                defaultSize={20} 
-                minSize={10} 
-                collapsible 
-                collapsedSize={0}
-                onCollapse={() => setIsOutputCollapsed(true)}
-                onExpand={() => setIsOutputCollapsed(false)}
-              >
-                <OutputPanel
-                  consoleLines={consoleLines}
-                  testResult={testResult}
-                  onClearConsole={handleClearConsole}
-                  activeTab={outputTab}
-                  onTabChange={setOutputTab}
-                  isCollapsed={isOutputCollapsed}
-                  onToggleCollapse={toggleOutputPanel}
-                />
-              </ResizablePanel>
-            </ResizablePanelGroup>
+              {isOutputCollapsed && (
+                <button
+                  onClick={toggleOutputPanel}
+                  className="flex items-center justify-between px-3 py-1.5 border-t bg-muted/30 hover-elevate text-sm text-muted-foreground"
+                  data-testid="button-expand-output"
+                >
+                  <span className="flex items-center gap-2">
+                    <Terminal className="h-3 w-3" />
+                    Console
+                  </span>
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

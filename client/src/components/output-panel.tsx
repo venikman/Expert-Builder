@@ -33,7 +33,7 @@ export function OutputPanel({
         className="h-full flex flex-col"
       >
         <div className="border-b px-2 flex items-center justify-between">
-          <TabsList className="h-10 bg-transparent gap-1">
+          <TabsList className="h-8 bg-transparent gap-1">
             <TabsTrigger
               value="console"
               className="data-[state=active]:bg-muted rounded-md px-3 py-1.5 text-sm"

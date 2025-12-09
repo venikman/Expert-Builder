@@ -35,7 +35,7 @@ export function CodeEditor({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-3 border-b bg-background">
+      <div className="flex items-center justify-between px-2 py-1 border-b bg-background">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-chart-2" />
           <span className="text-sm font-medium text-muted-foreground font-mono">

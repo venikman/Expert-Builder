@@ -196,7 +196,7 @@ export function AnimationCanvas({ lessonId, animation, isLoading, isCollapsed, o
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-3 border-b bg-background">
+      <div className="flex items-center justify-between px-2 py-1 border-b bg-background">
         <span className="text-sm font-medium text-muted-foreground">Concept Animation</span>
         <div className="flex items-center gap-1">
           <Tooltip>
