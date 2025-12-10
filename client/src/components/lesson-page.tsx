@@ -247,7 +247,6 @@ export function LessonPage({
                     consoleLines={consoleLines}
                     testResult={testResult}
                     diagnostics={diagnostics}
-                    lessonId={lesson.id}
                     onClearConsole={handleClearConsole}
                     onDiagnosticClick={handleDiagnosticClick}
                     activeTab={outputTab}
@@ -331,7 +330,6 @@ export function LessonPage({
                 consoleLines={consoleLines}
                 testResult={testResult}
                 diagnostics={diagnostics}
-                lessonId={lesson.id}
                 onClearConsole={handleClearConsole}
                 onDiagnosticClick={handleDiagnosticClick}
                 activeTab={outputTab}

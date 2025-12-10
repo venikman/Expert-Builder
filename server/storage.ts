@@ -1,49 +1,20 @@
-import { 
-  users, lessons, lessonAnimations, submissions, learnerProgress,
-  type User, type InsertUser, type Lesson, type InsertLesson,
-  type LessonAnimation, type LessonAnimationRow, type InsertLessonAnimation,
-  type SubmissionRow, type InsertSubmission, type SubmissionResult,
-  type LearnerProgress, type InsertLearnerProgress
+import {
+  lessons, submissions,
+  type Lesson, type InsertLesson,
+  type SubmissionRow, type SubmissionResult
 } from "@shared/schema";
+// InsertLesson still needed for seedDatabase
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
   getLessons(): Promise<Lesson[]>;
   getLesson(id: string): Promise<Lesson | undefined>;
-  createLesson(lesson: InsertLesson): Promise<Lesson>;
-  updateLesson(id: string, lesson: Partial<InsertLesson>): Promise<Lesson | undefined>;
-  deleteLesson(id: string): Promise<boolean>;
-  getLessonAnimation(lessonId: string): Promise<LessonAnimation | undefined>;
-  createLessonAnimation(animation: InsertLessonAnimation): Promise<LessonAnimationRow>;
-  updateLessonAnimation(lessonId: string, animation: Partial<InsertLessonAnimation>): Promise<LessonAnimationRow | undefined>;
-  createSubmission(lessonId: string, code: string, result: SubmissionResult, userId?: number): Promise<SubmissionRow>;
+  createSubmission(lessonId: string, code: string, result: SubmissionResult): Promise<SubmissionRow>;
   getSubmissions(lessonId: string): Promise<SubmissionRow[]>;
-  getUserSubmissions(userId: number): Promise<SubmissionRow[]>;
-  getLearnerProgress(userId: number): Promise<LearnerProgress[]>;
-  getLessonProgress(userId: number, lessonId: string): Promise<LearnerProgress | undefined>;
-  updateLearnerProgress(userId: number, lessonId: string, data: Partial<InsertLearnerProgress>): Promise<LearnerProgress>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
-  }
-
   async getLessons(): Promise<Lesson[]> {
     const result = await db.select().from(lessons).orderBy(lessons.order);
     return result;
@@ -54,61 +25,13 @@ export class DatabaseStorage implements IStorage {
     return lesson || undefined;
   }
 
-  async createLesson(lesson: InsertLesson): Promise<Lesson> {
-    const [created] = await db.insert(lessons).values(lesson).returning();
-    return created;
-  }
-
-  async updateLesson(id: string, lesson: Partial<InsertLesson>): Promise<Lesson | undefined> {
-    const [updated] = await db
-      .update(lessons)
-      .set({ ...lesson, updatedAt: new Date() })
-      .where(eq(lessons.id, id))
-      .returning();
-    return updated || undefined;
-  }
-
-  async deleteLesson(id: string): Promise<boolean> {
-    const result = await db.delete(lessons).where(eq(lessons.id, id));
-    return true;
-  }
-
-  async getLessonAnimation(lessonId: string): Promise<LessonAnimation | undefined> {
-    const [animation] = await db
-      .select()
-      .from(lessonAnimations)
-      .where(eq(lessonAnimations.lessonId, lessonId));
-    
-    if (!animation) return undefined;
-    
-    return {
-      sceneData: animation.sceneData as Record<string, any>,
-      steps: animation.steps as any[],
-    };
-  }
-
-  async createLessonAnimation(animation: InsertLessonAnimation): Promise<LessonAnimationRow> {
-    const [created] = await db.insert(lessonAnimations).values(animation).returning();
-    return created;
-  }
-
-  async updateLessonAnimation(lessonId: string, animation: Partial<InsertLessonAnimation>): Promise<LessonAnimationRow | undefined> {
-    const [updated] = await db
-      .update(lessonAnimations)
-      .set(animation)
-      .where(eq(lessonAnimations.lessonId, lessonId))
-      .returning();
-    return updated || undefined;
-  }
-
-  async createSubmission(lessonId: string, code: string, result: SubmissionResult, userId?: number): Promise<SubmissionRow> {
+  async createSubmission(lessonId: string, code: string, result: SubmissionResult): Promise<SubmissionRow> {
     const [submission] = await db
       .insert(submissions)
       .values({
         lessonId,
         code,
         result,
-        userId: userId || null,
       })
       .returning();
     return submission;
@@ -120,55 +43,6 @@ export class DatabaseStorage implements IStorage {
       .from(submissions)
       .where(eq(submissions.lessonId, lessonId))
       .orderBy(desc(submissions.submittedAt));
-  }
-
-  async getUserSubmissions(userId: number): Promise<SubmissionRow[]> {
-    return db
-      .select()
-      .from(submissions)
-      .where(eq(submissions.userId, userId))
-      .orderBy(desc(submissions.submittedAt));
-  }
-
-  async getLearnerProgress(userId: number): Promise<LearnerProgress[]> {
-    return db
-      .select()
-      .from(learnerProgress)
-      .where(eq(learnerProgress.userId, userId));
-  }
-
-  async getLessonProgress(userId: number, lessonId: string): Promise<LearnerProgress | undefined> {
-    const [progress] = await db
-      .select()
-      .from(learnerProgress)
-      .where(and(
-        eq(learnerProgress.userId, userId),
-        eq(learnerProgress.lessonId, lessonId)
-      ));
-    return progress || undefined;
-  }
-
-  async updateLearnerProgress(userId: number, lessonId: string, data: Partial<InsertLearnerProgress>): Promise<LearnerProgress> {
-    const existing = await this.getLessonProgress(userId, lessonId);
-    
-    if (existing) {
-      const [updated] = await db
-        .update(learnerProgress)
-        .set(data)
-        .where(eq(learnerProgress.id, existing.id))
-        .returning();
-      return updated;
-    }
-    
-    const [created] = await db
-      .insert(learnerProgress)
-      .values({
-        userId,
-        lessonId,
-        ...data,
-      })
-      .returning();
-    return created;
   }
 }
 
@@ -702,157 +576,6 @@ public class Exercise
   },
 ];
 
-const seedAnimations: InsertLessonAnimation[] = [
-  {
-    lessonId: "pure-functions",
-    sceneData: {
-      shapes: [
-        { id: "input-box", type: "box", x: 50, y: 120, width: 60, height: 40, label: "5", color: "rgba(59, 130, 246, 0.2)" },
-        { id: "function-box", type: "function", x: 160, y: 100, width: 80, height: 80, label: "Square", color: "rgba(34, 197, 94, 0.2)" },
-        { id: "output-box", type: "box", x: 290, y: 120, width: 60, height: 40, label: "25", color: "rgba(168, 85, 247, 0.2)" },
-        { id: "arrow1", type: "arrow", x: 110, y: 140, width: 50, height: 0, label: "", color: "" },
-        { id: "arrow2", type: "arrow", x: 240, y: 140, width: 50, height: 0, label: "", color: "" },
-        { id: "title", type: "text", x: 200, y: 50, width: 0, height: 0, label: "Pure Function: Same input → Same output", color: "" },
-        { id: "note", type: "text", x: 200, y: 220, width: 0, height: 0, label: "No side effects!", color: "" },
-      ],
-    },
-    steps: [
-      { type: "highlight", target: "title", duration: 1000 },
-      { type: "highlight", target: "input-box", duration: 800 },
-      { type: "highlight", target: "arrow1", duration: 600 },
-      { type: "highlight", target: "function-box", duration: 1000 },
-      { type: "highlight", target: "arrow2", duration: 600 },
-      { type: "highlight", target: "output-box", duration: 800 },
-      { type: "highlight", target: "note", duration: 1000 },
-    ],
-  },
-  {
-    lessonId: "map-filter",
-    sceneData: {
-      shapes: [
-        { id: "input-label", type: "text", x: 60, y: 40, width: 0, height: 0, label: "Input: [1, 2, 3, 4, 5, 6]", color: "" },
-        { id: "box1", type: "box", x: 20, y: 60, width: 30, height: 30, label: "1", color: "rgba(156, 163, 175, 0.3)" },
-        { id: "box2", type: "box", x: 55, y: 60, width: 30, height: 30, label: "2", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "box3", type: "box", x: 90, y: 60, width: 30, height: 30, label: "3", color: "rgba(156, 163, 175, 0.3)" },
-        { id: "box4", type: "box", x: 125, y: 60, width: 30, height: 30, label: "4", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "box5", type: "box", x: 160, y: 60, width: 30, height: 30, label: "5", color: "rgba(156, 163, 175, 0.3)" },
-        { id: "box6", type: "box", x: 195, y: 60, width: 30, height: 30, label: "6", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "filter-fn", type: "function", x: 260, y: 55, width: 100, height: 40, label: ".Where(even)", color: "rgba(245, 158, 11, 0.2)" },
-        { id: "filtered-label", type: "text", x: 80, y: 140, width: 0, height: 0, label: "After filter: [2, 4, 6]", color: "" },
-        { id: "f-box2", type: "box", x: 55, y: 160, width: 30, height: 30, label: "2", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "f-box4", type: "box", x: 90, y: 160, width: 30, height: 30, label: "4", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "f-box6", type: "box", x: 125, y: 160, width: 30, height: 30, label: "6", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "map-fn", type: "function", x: 200, y: 155, width: 100, height: 40, label: ".Select(x²)", color: "rgba(34, 197, 94, 0.2)" },
-        { id: "result-label", type: "text", x: 80, y: 240, width: 0, height: 0, label: "Result: [4, 16, 36]", color: "" },
-        { id: "r-box1", type: "box", x: 55, y: 260, width: 30, height: 30, label: "4", color: "rgba(168, 85, 247, 0.3)" },
-        { id: "r-box2", type: "box", x: 90, y: 260, width: 30, height: 30, label: "16", color: "rgba(168, 85, 247, 0.3)" },
-        { id: "r-box3", type: "box", x: 125, y: 260, width: 30, height: 30, label: "36", color: "rgba(168, 85, 247, 0.3)" },
-      ],
-    },
-    steps: [
-      { type: "highlight", target: "input-label", duration: 800 },
-      { type: "highlight", target: "box2", duration: 400 },
-      { type: "highlight", target: "box4", duration: 400 },
-      { type: "highlight", target: "box6", duration: 400 },
-      { type: "highlight", target: "filter-fn", duration: 1000 },
-      { type: "highlight", target: "filtered-label", duration: 600 },
-      { type: "highlight", target: "f-box2", duration: 300 },
-      { type: "highlight", target: "f-box4", duration: 300 },
-      { type: "highlight", target: "f-box6", duration: 300 },
-      { type: "highlight", target: "map-fn", duration: 1000 },
-      { type: "highlight", target: "result-label", duration: 600 },
-      { type: "highlight", target: "r-box1", duration: 300 },
-      { type: "highlight", target: "r-box2", duration: 300 },
-      { type: "highlight", target: "r-box3", duration: 300 },
-    ],
-  },
-  {
-    lessonId: "function-composition",
-    sceneData: {
-      shapes: [
-        { id: "title", type: "text", x: 200, y: 30, width: 0, height: 0, label: "Compose(f, g)(x) = f(g(x))", color: "" },
-        { id: "input", type: "box", x: 30, y: 130, width: 50, height: 40, label: "5", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "arrow1", type: "arrow", x: 80, y: 150, width: 40, height: 0, label: "", color: "" },
-        { id: "g-fn", type: "function", x: 130, y: 115, width: 80, height: 70, label: "g: x*3", color: "rgba(245, 158, 11, 0.2)" },
-        { id: "middle", type: "box", x: 220, y: 130, width: 50, height: 40, label: "15", color: "rgba(245, 158, 11, 0.3)" },
-        { id: "arrow2", type: "arrow", x: 270, y: 150, width: 40, height: 0, label: "", color: "" },
-        { id: "f-fn", type: "function", x: 320, y: 115, width: 80, height: 70, label: "f: x+1", color: "rgba(34, 197, 94, 0.2)" },
-        { id: "output", type: "box", x: 410, y: 130, width: 50, height: 40, label: "16", color: "rgba(168, 85, 247, 0.3)" },
-        { id: "step1", type: "text", x: 170, y: 210, width: 0, height: 0, label: "Step 1: g(5) = 5 * 3 = 15", color: "" },
-        { id: "step2", type: "text", x: 350, y: 210, width: 0, height: 0, label: "Step 2: f(15) = 15 + 1 = 16", color: "" },
-      ],
-    },
-    steps: [
-      { type: "highlight", target: "title", duration: 1000 },
-      { type: "highlight", target: "input", duration: 600 },
-      { type: "highlight", target: "arrow1", duration: 400 },
-      { type: "highlight", target: "g-fn", duration: 800 },
-      { type: "highlight", target: "step1", duration: 800 },
-      { type: "highlight", target: "middle", duration: 600 },
-      { type: "highlight", target: "arrow2", duration: 400 },
-      { type: "highlight", target: "f-fn", duration: 800 },
-      { type: "highlight", target: "step2", duration: 800 },
-      { type: "highlight", target: "output", duration: 600 },
-    ],
-  },
-  {
-    lessonId: "option-type",
-    sceneData: {
-      shapes: [
-        { id: "title", type: "text", x: 200, y: 30, width: 0, height: 0, label: "Option<T>: Safe null handling", color: "" },
-        { id: "some-box", type: "box", x: 80, y: 80, width: 120, height: 60, label: "Some(value)", color: "rgba(34, 197, 94, 0.2)" },
-        { id: "none-box", type: "box", x: 220, y: 80, width: 120, height: 60, label: "None", color: "rgba(239, 68, 68, 0.2)" },
-        { id: "divide-fn", type: "function", x: 150, y: 180, width: 120, height: 50, label: "SafeDivide", color: "rgba(59, 130, 246, 0.2)" },
-        { id: "case1", type: "text", x: 100, y: 260, width: 0, height: 0, label: "10 / 2 → Some(5)", color: "" },
-        { id: "case2", type: "text", x: 280, y: 260, width: 0, height: 0, label: "10 / 0 → None", color: "" },
-      ],
-    },
-    steps: [
-      { type: "highlight", target: "title", duration: 1000 },
-      { type: "highlight", target: "some-box", duration: 800 },
-      { type: "highlight", target: "none-box", duration: 800 },
-      { type: "highlight", target: "divide-fn", duration: 1000 },
-      { type: "highlight", target: "case1", duration: 800 },
-      { type: "highlight", target: "case2", duration: 800 },
-    ],
-  },
-  {
-    lessonId: "reduce-fold",
-    sceneData: {
-      shapes: [
-        { id: "title", type: "text", x: 200, y: 30, width: 0, height: 0, label: "Aggregate: Reduce to single value", color: "" },
-        { id: "input-label", type: "text", x: 60, y: 60, width: 0, height: 0, label: "Input: [1, 2, 3, 4, 5]", color: "" },
-        { id: "acc-0", type: "box", x: 30, y: 100, width: 60, height: 30, label: "acc=1", color: "rgba(156, 163, 175, 0.3)" },
-        { id: "step1", type: "text", x: 120, y: 110, width: 0, height: 0, label: "× 1 = 1", color: "" },
-        { id: "acc-1", type: "box", x: 30, y: 140, width: 60, height: 30, label: "acc=1", color: "rgba(156, 163, 175, 0.3)" },
-        { id: "step2", type: "text", x: 120, y: 150, width: 0, height: 0, label: "× 2 = 2", color: "" },
-        { id: "acc-2", type: "box", x: 30, y: 180, width: 60, height: 30, label: "acc=2", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "step3", type: "text", x: 120, y: 190, width: 0, height: 0, label: "× 3 = 6", color: "" },
-        { id: "acc-3", type: "box", x: 30, y: 220, width: 60, height: 30, label: "acc=6", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "step4", type: "text", x: 120, y: 230, width: 0, height: 0, label: "× 4 = 24", color: "" },
-        { id: "acc-4", type: "box", x: 30, y: 260, width: 60, height: 30, label: "acc=24", color: "rgba(59, 130, 246, 0.3)" },
-        { id: "step5", type: "text", x: 120, y: 270, width: 0, height: 0, label: "× 5 = 120", color: "" },
-        { id: "result", type: "box", x: 200, y: 260, width: 80, height: 40, label: "120", color: "rgba(168, 85, 247, 0.3)" },
-      ],
-    },
-    steps: [
-      { type: "highlight", target: "title", duration: 800 },
-      { type: "highlight", target: "input-label", duration: 600 },
-      { type: "highlight", target: "acc-0", duration: 400 },
-      { type: "highlight", target: "step1", duration: 400 },
-      { type: "highlight", target: "acc-1", duration: 400 },
-      { type: "highlight", target: "step2", duration: 400 },
-      { type: "highlight", target: "acc-2", duration: 400 },
-      { type: "highlight", target: "step3", duration: 400 },
-      { type: "highlight", target: "acc-3", duration: 400 },
-      { type: "highlight", target: "step4", duration: 400 },
-      { type: "highlight", target: "acc-4", duration: 400 },
-      { type: "highlight", target: "step5", duration: 400 },
-      { type: "highlight", target: "result", duration: 800 },
-    ],
-  },
-];
-
 export async function seedDatabase(): Promise<void> {
   const existingLessons = await db.select().from(lessons);
   if (existingLessons.length > 0) {
@@ -860,14 +583,10 @@ export async function seedDatabase(): Promise<void> {
     return;
   }
 
-  console.log("Seeding database with lessons and animations...");
+  console.log("Seeding database with lessons...");
 
   for (const lesson of seedLessons) {
     await db.insert(lessons).values(lesson);
-  }
-
-  for (const animation of seedAnimations) {
-    await db.insert(lessonAnimations).values(animation);
   }
 
   console.log("Database seeded successfully!");

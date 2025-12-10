@@ -5,7 +5,6 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import type { SubmissionResult, TestResult, Diagnostic } from "@shared/schema";
 import { INFRASTRUCTURE_ERROR_CODES } from "@shared/schema";
-import { generatePersonalizedHint } from "./ai-tutor";
 
 // Export for testing
 export function removeMainMethod(code: string): string {
@@ -457,15 +456,7 @@ export async function runTests(
 
   if (failedTests.length > 0) {
     const firstFailedTest = failedTests[0];
-    const staticHint = hints[firstFailedTest.name];
-
-    hint = await generatePersonalizedHint({
-      lessonId,
-      lessonTitle,
-      code,
-      failedTests: failedTests.map(t => ({ name: t.name, message: t.message })),
-      staticHint
-    });
+    hint = hints[firstFailedTest.name] || "Check your solution and try again.";
   }
 
   return {

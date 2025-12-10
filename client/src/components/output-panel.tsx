@@ -23,7 +23,6 @@ interface OutputPanelProps {
   consoleLines: ConsoleLine[];
   testResult: SubmissionResult | null;
   diagnostics: Diagnostic[];
-  lessonId?: string;
   onClearConsole: () => void;
   onDiagnosticClick?: (diagnostic: Diagnostic) => void;
   activeTab: "console" | "tests" | "problems";
@@ -36,7 +35,6 @@ export function OutputPanel({
   consoleLines,
   testResult,
   diagnostics: rawDiagnostics,
-  lessonId,
   onClearConsole,
   onDiagnosticClick,
   activeTab,
@@ -125,7 +123,7 @@ export function OutputPanel({
           <ConsoleOutput lines={consoleLines} onClear={onClearConsole} />
         </TabsContent>
         <TabsContent value="tests" className="flex-1 m-0 h-0">
-          <TestResults result={testResult} lessonId={lessonId} />
+          <TestResults result={testResult} />
         </TabsContent>
       </Tabs>
     </div>
