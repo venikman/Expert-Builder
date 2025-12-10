@@ -1,17 +1,36 @@
-import { CheckCircle2, XCircle, AlertCircle, Lightbulb, Trophy } from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, Lightbulb, Trophy, Eye, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { apiRequest } from "@/lib/queryClient";
 import type { SubmissionResult } from "@shared/schema";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 interface TestResultsProps {
   result: SubmissionResult | null;
+  lessonId?: string;
 }
 
-export function TestResults({ result }: TestResultsProps) {
+export function TestResults({ result, lessonId }: TestResultsProps) {
   const [isHintOpen, setIsHintOpen] = useState(false);
+  const [solution, setSolution] = useState<string | null>(null);
+  const [isLoadingSolution, setIsLoadingSolution] = useState(false);
+  const [solutionDialogOpen, setSolutionDialogOpen] = useState(false);
+
+  const fetchSolution = useCallback(async () => {
+    if (!lessonId || solution) return;
+    setIsLoadingSolution(true);
+    try {
+      const response = await apiRequest<{ solution: string }>("GET", `/api/lessons/${lessonId}/solution`);
+      setSolution(response.solution);
+    } catch {
+      // Silently fail - user might not have completed the lesson
+    } finally {
+      setIsLoadingSolution(false);
+    }
+  }, [lessonId, solution]);
 
   if (!result) {
     return (
@@ -66,6 +85,44 @@ export function TestResults({ result }: TestResultsProps) {
               <p className="text-sm text-muted-foreground mt-1">
                 Great work! Move on to the next lesson.
               </p>
+              {lessonId && (
+                <Dialog open={solutionDialogOpen} onOpenChange={(open) => {
+                  setSolutionDialogOpen(open);
+                  if (open) fetchSolution();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      data-testid="button-view-solution"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Reference Solution
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh]">
+                    <DialogHeader>
+                      <DialogTitle>Reference Solution</DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[60vh]">
+                      {isLoadingSolution ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : solution ? (
+                        <pre className="bg-muted p-4 rounded-md text-sm font-mono overflow-x-auto whitespace-pre-wrap">
+                          {solution}
+                        </pre>
+                      ) : (
+                        <p className="text-muted-foreground text-center py-8">
+                          Solution not available
+                        </p>
+                      )}
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           )}
 

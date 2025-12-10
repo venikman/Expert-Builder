@@ -1,54 +1,49 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ChevronDown, ChevronUp, Play, Terminal } from "lucide-react";
+import { ChevronDown, ChevronUp, Terminal, Clock } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, type ImperativePanelHandle } from "@/components/ui/resizable";
-import { Button } from "@/components/ui/button";
 import { LessonContent } from "@/components/lesson-content";
-import { AnimationCanvas } from "@/components/animation-canvas";
-import { CodeEditor } from "@/components/code-editor";
+import { CodeEditor, type CodeEditorHandle } from "@/components/code-editor";
 import { OutputPanel } from "@/components/output-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Lesson, LessonAnimation, ConsoleLine, SubmissionResult, ExecuteResult } from "@shared/schema";
+import type { Lesson, ConsoleLine, SubmissionResult, ExecuteResult, Diagnostic } from "@shared/schema";
 
 interface LessonPageProps {
   lesson: Lesson | null;
-  animation: LessonAnimation | null;
   isLoadingLesson: boolean;
-  isLoadingAnimation: boolean;
 }
 
 export function LessonPage({
   lesson,
-  animation,
   isLoadingLesson,
-  isLoadingAnimation,
 }: LessonPageProps) {
   const { toast } = useToast();
   const [code, setCode] = useState("");
   const [consoleLines, setConsoleLines] = useState<ConsoleLine[]>([]);
   const [testResult, setTestResult] = useState<SubmissionResult | null>(null);
+  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [outputTab, setOutputTab] = useState<"console" | "tests">("console");
-  const [mobileTab, setMobileTab] = useState<"lesson" | "canvas" | "editor">("lesson");
-  const [isAnimationCollapsed, setIsAnimationCollapsed] = useState(false);
+  const [outputTab, setOutputTab] = useState<"console" | "tests" | "problems">("problems");
+  const [mobileTab, setMobileTab] = useState<"lesson" | "editor">("lesson");
   const [isOutputCollapsed, setIsOutputCollapsed] = useState(false);
-  
-  const animationPanelRef = useRef<ImperativePanelHandle>(null);
+
+  // Timer state
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
+
   const outputPanelRef = useRef<ImperativePanelHandle>(null);
-  
-  const toggleAnimationPanel = useCallback(() => {
-    if (isAnimationCollapsed) {
-      animationPanelRef.current?.expand();
-      setIsAnimationCollapsed(false);
-    } else {
-      animationPanelRef.current?.collapse();
-      setIsAnimationCollapsed(true);
-    }
-  }, [isAnimationCollapsed]);
-  
+  const codeEditorRef = useRef<CodeEditorHandle>(null);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const toggleOutputPanel = useCallback(() => {
     if (isOutputCollapsed) {
       outputPanelRef.current?.expand();
@@ -59,13 +54,53 @@ export function LessonPage({
     }
   }, [isOutputCollapsed]);
 
+  // Load code from localStorage or skeleton, and start timer
   useEffect(() => {
-    if (lesson?.skeleton) {
-      setCode(lesson.skeleton);
+    if (lesson?.id && lesson?.skeleton) {
+      // Try to restore saved code
+      const savedCode = localStorage.getItem(`code-${lesson.id}`);
+      const savedTime = localStorage.getItem(`time-${lesson.id}`);
+
+      if (savedCode && savedCode !== lesson.skeleton) {
+        setCode(savedCode);
+      } else {
+        setCode(lesson.skeleton);
+      }
+
+      // Restore or reset timer
+      setElapsedTime(savedTime ? parseInt(savedTime, 10) : 0);
+
       setConsoleLines([]);
       setTestResult(null);
+      setDiagnostics([]);
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setElapsedTime((prev) => {
+          const newTime = prev + 1;
+          localStorage.setItem(`time-${lesson.id}`, String(newTime));
+          return newTime;
+        });
+      }, 1000);
+
+      return () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      };
     }
   }, [lesson?.id, lesson?.skeleton]);
+
+  // Auto-save code to localStorage
+  useEffect(() => {
+    if (lesson?.id && code) {
+      localStorage.setItem(`code-${lesson.id}`, code);
+    }
+  }, [code, lesson?.id]);
+
+  const handleDiagnosticClick = useCallback((diagnostic: Diagnostic) => {
+    codeEditorRef.current?.goToLine(diagnostic.line, diagnostic.column);
+  }, []);
 
   const addConsoleLine = useCallback((type: ConsoleLine["type"], content: string) => {
     setConsoleLines((prev) => [
@@ -76,7 +111,7 @@ export function LessonPage({
 
   const handleRun = useCallback(async () => {
     if (!lesson) return;
-    
+
     setIsRunning(true);
     setOutputTab("console");
     addConsoleLine("info", "Compiling and running...");
@@ -111,7 +146,7 @@ export function LessonPage({
 
   const handleSubmit = useCallback(async () => {
     if (!lesson) return;
-    
+
     setIsSubmitting(true);
     addConsoleLine("info", "Submitting for grading...");
 
@@ -176,64 +211,34 @@ export function LessonPage({
           <ResizablePanel defaultSize={40} minSize={25}>
             <LessonContent lesson={lesson} />
           </ResizablePanel>
-          
+
           <ResizableHandle withHandle />
-          
+
           <ResizablePanel defaultSize={60} minSize={40}>
             <div className="h-full flex flex-col">
-              {isAnimationCollapsed && (
-                <button
-                  onClick={toggleAnimationPanel}
-                  className="flex items-center justify-between px-3 py-1.5 border-b bg-muted/30 hover-elevate text-sm text-muted-foreground"
-                  data-testid="button-expand-animation"
-                >
-                  <span className="flex items-center gap-2">
-                    <Play className="h-3 w-3" />
-                    Animation
-                  </span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-              )}
-              
               <ResizablePanelGroup direction="vertical" className="flex-1">
-                <ResizablePanel 
-                  ref={animationPanelRef}
-                  defaultSize={isAnimationCollapsed ? 0 : 30} 
-                  minSize={10} 
-                  collapsible 
-                  collapsedSize={0}
-                  onCollapse={() => setIsAnimationCollapsed(true)}
-                  onExpand={() => setIsAnimationCollapsed(false)}
-                >
-                  <AnimationCanvas
-                    lessonId={lesson.id}
-                    animation={animation}
-                    isLoading={isLoadingAnimation}
-                    isCollapsed={isAnimationCollapsed}
-                    onToggleCollapse={toggleAnimationPanel}
-                  />
-                </ResizablePanel>
-                
-                <ResizableHandle withHandle />
-                
-                <ResizablePanel defaultSize={50} minSize={20}>
+                <ResizablePanel defaultSize={70} minSize={30}>
                   <CodeEditor
+                    ref={codeEditorRef}
                     code={code}
+                    lessonId={lesson.id}
+                    skeleton={lesson.skeleton}
                     onCodeChange={setCode}
                     onRun={handleRun}
                     onSubmit={handleSubmit}
                     isRunning={isRunning}
                     isSubmitting={isSubmitting}
+                    onDiagnosticsChange={setDiagnostics}
                   />
                 </ResizablePanel>
-                
+
                 <ResizableHandle withHandle />
-                
-                <ResizablePanel 
+
+                <ResizablePanel
                   ref={outputPanelRef}
-                  defaultSize={isOutputCollapsed ? 0 : 20} 
-                  minSize={10} 
-                  collapsible 
+                  defaultSize={isOutputCollapsed ? 0 : 30}
+                  minSize={10}
+                  collapsible
                   collapsedSize={0}
                   onCollapse={() => setIsOutputCollapsed(true)}
                   onExpand={() => setIsOutputCollapsed(false)}
@@ -241,7 +246,10 @@ export function LessonPage({
                   <OutputPanel
                     consoleLines={consoleLines}
                     testResult={testResult}
+                    diagnostics={diagnostics}
+                    lessonId={lesson.id}
                     onClearConsole={handleClearConsole}
+                    onDiagnosticClick={handleDiagnosticClick}
                     activeTab={outputTab}
                     onTabChange={setOutputTab}
                     isCollapsed={isOutputCollapsed}
@@ -249,7 +257,7 @@ export function LessonPage({
                   />
                 </ResizablePanel>
               </ResizablePanelGroup>
-              
+
               {isOutputCollapsed && (
                 <button
                   onClick={toggleOutputPanel}
@@ -260,7 +268,13 @@ export function LessonPage({
                     <Terminal className="h-3 w-3" />
                     Console
                   </span>
-                  <ChevronUp className="h-4 w-4" />
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1 text-xs font-mono">
+                      <Clock className="h-3 w-3" />
+                      {formatTime(elapsedTime)}
+                    </span>
+                    <ChevronUp className="h-4 w-4" />
+                  </div>
                 </button>
               )}
             </div>
@@ -269,9 +283,9 @@ export function LessonPage({
       </div>
 
       <div className="lg:hidden h-full flex flex-col">
-        <Tabs 
-          value={mobileTab} 
-          onValueChange={(v) => setMobileTab(v as "lesson" | "canvas" | "editor")}
+        <Tabs
+          value={mobileTab}
+          onValueChange={(v) => setMobileTab(v as "lesson" | "editor")}
           className="flex-1 flex flex-col"
         >
           <div className="border-b px-2 shrink-0">
@@ -284,13 +298,6 @@ export function LessonPage({
                 Lesson
               </TabsTrigger>
               <TabsTrigger
-                value="canvas"
-                className="flex-1 data-[state=active]:bg-muted rounded-md"
-                data-testid="mobile-tab-canvas"
-              >
-                Animation
-              </TabsTrigger>
-              <TabsTrigger
                 value="editor"
                 className="flex-1 data-[state=active]:bg-muted rounded-md"
                 data-testid="mobile-tab-editor"
@@ -299,35 +306,34 @@ export function LessonPage({
               </TabsTrigger>
             </TabsList>
           </div>
-          
+
           <TabsContent value="lesson" className="flex-1 m-0">
             <LessonContent lesson={lesson} />
           </TabsContent>
-          
-          <TabsContent value="canvas" className="flex-1 m-0">
-            <AnimationCanvas
-              lessonId={lesson.id}
-              animation={animation}
-              isLoading={isLoadingAnimation}
-            />
-          </TabsContent>
-          
+
           <TabsContent value="editor" className="flex-1 m-0 flex flex-col">
             <div className="flex-1 min-h-0">
               <CodeEditor
+                ref={codeEditorRef}
                 code={code}
+                lessonId={lesson.id}
+                skeleton={lesson.skeleton}
                 onCodeChange={setCode}
                 onRun={handleRun}
                 onSubmit={handleSubmit}
                 isRunning={isRunning}
                 isSubmitting={isSubmitting}
+                onDiagnosticsChange={setDiagnostics}
               />
             </div>
             <div className="h-48 border-t">
               <OutputPanel
                 consoleLines={consoleLines}
                 testResult={testResult}
+                diagnostics={diagnostics}
+                lessonId={lesson.id}
                 onClearConsole={handleClearConsole}
+                onDiagnosticClick={handleDiagnosticClick}
                 activeTab={outputTab}
                 onTabChange={setOutputTab}
               />

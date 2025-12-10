@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { LessonPage } from "@/components/lesson-page";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Lesson, LessonAnimation, LearnerProgress } from "@shared/schema";
+import type { Lesson, LearnerProgress } from "@shared/schema";
 
 export default function Home() {
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
@@ -17,11 +17,6 @@ export default function Home() {
   });
 
   const currentLesson = lessons[currentLessonIndex];
-
-  const { data: animation, isLoading: isLoadingAnimation } = useQuery<LessonAnimation>({
-    queryKey: ["/api/lessons", currentLesson?.id, "animation"],
-    enabled: !!currentLesson?.id,
-  });
 
   const handleLessonChange = (index: number) => {
     if (index >= 0 && index < lessons.length) {
@@ -65,9 +60,7 @@ export default function Home() {
       <main className="flex-1 min-h-0">
         <LessonPage
           lesson={currentLesson || null}
-          animation={animation || null}
           isLoadingLesson={isLoadingLessons}
-          isLoadingAnimation={isLoadingAnimation}
         />
       </main>
     </div>
