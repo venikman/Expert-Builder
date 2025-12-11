@@ -575,10 +575,11 @@ public class Program
     it("prevents network access", async () => {
       const code = `
 using System.Net.Http;
+using System.Threading.Tasks;
 
 public class Program
 {
-    public static async void Main()
+    public static async Task Main()
     {
         var client = new HttpClient();
         var result = await client.GetStringAsync("http://example.com");

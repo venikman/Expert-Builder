@@ -182,6 +182,7 @@ static string WrapCode(string code)
         // Find the class that contains Main - look for TestRunner first (for tests),
         // otherwise use the class right before "static void Main"
         string? className = null;
+        bool hasArgs = false;
 
         // Check for TestRunner class (used in test harnesses)
         if (code.Contains("class TestRunner"))
@@ -209,13 +210,20 @@ static string WrapCode(string code)
             }
         }
 
+        // Check if Main takes string[] args parameter
+        hasArgs = System.Text.RegularExpressions.Regex.IsMatch(
+            code,
+            @"static\s+(void|async\s+Task)\s+Main\s*\(\s*string\s*\[\s*\]\s+\w+"
+        );
+
         if (className != null)
         {
-            // Return code that defines the class and calls Main
+            // Return code that defines the class and calls Main with appropriate signature
+            var mainCall = hasArgs ? $"{className}.Main(Array.Empty<string>());" : $"{className}.Main();";
             return $@"
 {code}
 
-{className}.Main();
+{mainCall}
 ";
         }
     }
@@ -232,9 +240,9 @@ static string FormatDiagnostic(Microsoft.CodeAnalysis.Diagnostic d, string origi
 
     // Adjust line numbers for wrapped code
     var severity = d.Severity.ToString().ToLower();
-    var code_id = d.Id;
+    var codeId = d.Id;
 
-    return $"({line},{col}): {severity} {code_id}: {d.GetMessage()}";
+    return $"({line},{col}): {severity} {codeId}: {d.GetMessage()}";
 }
 
 record ExecuteRequest

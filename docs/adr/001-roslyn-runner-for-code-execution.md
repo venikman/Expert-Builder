@@ -133,7 +133,7 @@ For class-based code, the runner appends a call to invoke `Main()`:
 - Still incurs per-execution compilation overhead
 - Less control over execution context
 
-**Note**: We use .NET 10 Preview as the runtime but leverage Roslyn Scripting API for persistent warm execution rather than `dotnet run app.cs` per-request.
+**Note**: We use .NET 9 as the runtime and leverage Roslyn Scripting API for persistent warm execution rather than `dotnet run app.cs` per-request.
 
 ### 4. WebAssembly (Blazor)
 

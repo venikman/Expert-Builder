@@ -25,6 +25,7 @@ export async function startRunner(): Promise<void> {
 
   return new Promise((resolve, reject) => {
     const runnerPath = process.env.ROSLYN_RUNNER_PATH;
+    let startupTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     // In production, use the pre-built executable
     // In development, use dotnet run
@@ -53,11 +54,17 @@ export async function startRunner(): Promise<void> {
       if (line === "READY") {
         console.log("[Runner] Roslyn runner is ready");
         runnerReady = true;
+        if (startupTimeoutId) {
+          clearTimeout(startupTimeoutId);
+          startupTimeoutId = null;
+        }
         resolve();
         return;
       }
 
       // Parse JSON response
+      // Note: Runner processes requests serially, so FIFO ordering is safe
+      // as long as we don't have concurrent requests (which we don't in single-user mode)
       try {
         const response = JSON.parse(line) as RunnerResponse;
         // Get the oldest pending request (FIFO)
@@ -74,6 +81,10 @@ export async function startRunner(): Promise<void> {
     runnerProcess.on("error", (err) => {
       console.error(`[Runner] Process error: ${err.message}`);
       runnerReady = false;
+      if (startupTimeoutId) {
+        clearTimeout(startupTimeoutId);
+        startupTimeoutId = null;
+      }
       reject(err);
     });
 
@@ -91,7 +102,7 @@ export async function startRunner(): Promise<void> {
     });
 
     // Timeout for startup
-    setTimeout(() => {
+    startupTimeoutId = setTimeout(() => {
       if (!runnerReady) {
         reject(new Error("Runner startup timeout"));
       }
@@ -367,32 +378,8 @@ export async function getDiagnostics(code: string): Promise<{ diagnostics: Diagn
       return { diagnostics: [] };
     }
 
-    // Parse diagnostics from error output
-    const diagnostics = response.Diagnostics?.map(d => {
-      const match = d.match(/\((\d+),(\d+)\):\s+(error|warning)\s+(\w+):\s+(.+)/i);
-      if (match) {
-        return {
-          line: parseInt(match[1], 10),
-          column: parseInt(match[2], 10),
-          severity: match[3].toLowerCase() as "error" | "warning",
-          message: match[5].trim(),
-          code: match[4],
-        };
-      }
-      return {
-        line: 1,
-        column: 1,
-        severity: "error" as const,
-        message: d,
-      };
-    }) || [];
-
-    // Fallback: parse from Error string if Diagnostics is empty
-    if (diagnostics.length === 0 && response.Error) {
-      return { diagnostics: parseDotnetOutput(response.Error) };
-    }
-
-    return { diagnostics };
+    // The Error property contains all diagnostics, newline-separated
+    return { diagnostics: parseDotnetOutput(response.Error || "") };
   } catch (error: any) {
     return {
       diagnostics: [{
