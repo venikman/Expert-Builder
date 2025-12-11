@@ -36,6 +36,21 @@ An auto-graded learning platform for modern C# with a focus on functional progra
 - Bun 1.0+
 - .NET SDK 9.0+
 
+### Installing .NET 9 SDK
+
+The RoslynRunner targets `net9.0`. On Ubuntu 22.04:
+
+```bash
+wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O /tmp/msprod.deb
+sudo dpkg -i /tmp/msprod.deb
+sudo apt update
+sudo apt install -y dotnet-sdk-9.0
+```
+
+The repo includes a `global.json` that pins the SDK version to ensure CI/CLI picks the correct one.
+
+> **Note:** If your environment only offers .NET 8, you can temporarily retarget the runner to `net8.0` in `roslyn-runner/RoslynRunner.csproj`. However, installing SDK 9 is preferred to stay aligned with the ADR.
+
 ## Setup
 
 1. **Install dependencies**:
