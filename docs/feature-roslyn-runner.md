@@ -120,7 +120,7 @@ Users experience 14+ second delays when running or submitting C# code in lessons
 - Environment variables and secrets are not accessible
 - Infinite loops and resource exhaustion are handled via timeouts
 - Memory allocation is bounded to prevent OOM attacks
-- SQL injection is not applicable (no database access from user code)
+- No external data access from user code
 - Code cannot escape the Roslyn scripting sandbox
 
 ## Technical Specification
