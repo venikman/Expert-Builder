@@ -1,6 +1,6 @@
 # Multi-stage build for Expert Builder
 # Stage 1: Build with Bun
-FROM oven/bun:1.1 AS builder
+FROM oven/bun:latest AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 
 # Install all dependencies (including dev)
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Copy source code
 COPY . .
