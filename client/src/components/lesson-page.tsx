@@ -32,7 +32,7 @@ export function LessonPage({
 
   // Timer state
   const [elapsedTime, setElapsedTime] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<Timer>(undefined);
 
   const outputPanelRef = useRef<ImperativePanelHandle>(null);
   const codeEditorRef = useRef<CodeEditorHandle>(null);
