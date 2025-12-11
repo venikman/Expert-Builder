@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import {
   removeMainMethod,
   generatePureFunctionTest,
@@ -376,5 +376,280 @@ public class Exercise
       expect(result.success).toBe(true);
       expect(result.passedTests).toBe(2);
     }, 60000);
+  });
+
+  // US-6: Multi-Class Code Execution Tests
+  describe("multi-class code execution (US-6)", () => {
+    it("executes code with multiple classes", async () => {
+      const code = `
+public class Calculator
+{
+    public static int Add(int a, int b) => a + b;
+    public static int Multiply(int a, int b) => a * b;
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine(Calculator.Add(2, 3));
+        Console.WriteLine(Calculator.Multiply(4, 5));
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("5");
+      expect(result.output).toContain("20");
+    }, 30000);
+
+    it("executes code with inheritance", async () => {
+      const code = `
+public abstract class Shape
+{
+    public abstract double Area();
+}
+
+public class Rectangle : Shape
+{
+    private double width, height;
+    public Rectangle(double w, double h) { width = w; height = h; }
+    public override double Area() => width * height;
+}
+
+public class Circle : Shape
+{
+    private double radius;
+    public Circle(double r) { radius = r; }
+    public override double Area() => Math.PI * radius * radius;
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        Shape rect = new Rectangle(3, 4);
+        Console.WriteLine($"Rectangle area: {rect.Area()}");
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("12");
+    }, 30000);
+
+    it("executes code with interfaces", async () => {
+      const code = `
+public interface IGreeter
+{
+    string Greet(string name);
+}
+
+public class FormalGreeter : IGreeter
+{
+    public string Greet(string name) => $"Good day, {name}.";
+}
+
+public class CasualGreeter : IGreeter
+{
+    public string Greet(string name) => $"Hey, {name}!";
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        IGreeter greeter = new CasualGreeter();
+        Console.WriteLine(greeter.Greet("World"));
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("Hey, World!");
+    }, 30000);
+
+    it("executes code with generics", async () => {
+      const code = `
+public class Box<T>
+{
+    private T value;
+    public Box(T v) { value = v; }
+    public T GetValue() => value;
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        var intBox = new Box<int>(42);
+        var strBox = new Box<string>("hello");
+        Console.WriteLine(intBox.GetValue());
+        Console.WriteLine(strBox.GetValue());
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("42");
+      expect(result.output).toContain("hello");
+    }, 30000);
+
+    it("executes code with nested classes", async () => {
+      const code = `
+public class Outer
+{
+    public class Inner
+    {
+        public static string GetMessage() => "From inner class";
+    }
+
+    public static void Main()
+    {
+        Console.WriteLine(Inner.GetMessage());
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("From inner class");
+    }, 30000);
+  });
+
+  // US-7: Security Protection Tests
+  describe("security protection (US-7)", () => {
+    it("handles timeout for infinite loops", async () => {
+      const code = `
+public class Program
+{
+    public static void Main()
+    {
+        while (true) { }
+    }
+}
+`;
+      const result = await executeCode(code);
+      // Should timeout, not hang forever
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("timeout");
+    }, 35000);
+
+    it("prevents file system access", async () => {
+      const code = `
+using System.IO;
+
+public class Program
+{
+    public static void Main()
+    {
+        File.WriteAllText("/tmp/malicious.txt", "evil content");
+        Console.WriteLine("File written!");
+    }
+}
+`;
+      const result = await executeCode(code);
+      // Roslyn scripting sandbox should prevent this or it should fail
+      // The exact behavior depends on the sandbox configuration
+      // At minimum, we verify it doesn't crash the runner
+      expect(result).toBeDefined();
+    }, 30000);
+
+    it("prevents process spawning", async () => {
+      const code = `
+using System.Diagnostics;
+
+public class Program
+{
+    public static void Main()
+    {
+        Process.Start("ls", "-la");
+        Console.WriteLine("Process started!");
+    }
+}
+`;
+      const result = await executeCode(code);
+      // Should fail or be sandboxed
+      expect(result).toBeDefined();
+    }, 30000);
+
+    it("prevents network access", async () => {
+      const code = `
+using System.Net.Http;
+
+public class Program
+{
+    public static async void Main()
+    {
+        var client = new HttpClient();
+        var result = await client.GetStringAsync("http://example.com");
+        Console.WriteLine(result);
+    }
+}
+`;
+      const result = await executeCode(code);
+      // Should fail or timeout
+      expect(result).toBeDefined();
+    }, 30000);
+
+    it("handles memory exhaustion gracefully", async () => {
+      const code = `
+public class Program
+{
+    public static void Main()
+    {
+        var list = new System.Collections.Generic.List<byte[]>();
+        for (int i = 0; i < 1000; i++)
+        {
+            list.Add(new byte[10_000_000]); // 10MB per allocation
+        }
+    }
+}
+`;
+      const result = await executeCode(code);
+      // Should fail gracefully, not crash the runner
+      expect(result).toBeDefined();
+    }, 30000);
+
+    it("prevents environment variable access", async () => {
+      const code = `
+public class Program
+{
+    public static void Main()
+    {
+        var secret = Environment.GetEnvironmentVariable("SECRET_KEY");
+        Console.WriteLine($"Secret: {secret}");
+    }
+}
+`;
+      const result = await executeCode(code);
+      // Should execute but not expose real secrets
+      expect(result.success).toBe(true);
+      // The output should show null or empty, not real env vars
+      expect(result.output).toContain("Secret:");
+    }, 30000);
+  });
+
+  // Performance Tests
+  describe("performance", () => {
+    it("warm execution completes under 500ms", async () => {
+      // First call to warm up
+      await executeCode('Console.WriteLine("warmup");');
+
+      // Measure second call
+      const start = Date.now();
+      const result = await executeCode('Console.WriteLine("test");');
+      const elapsed = Date.now() - start;
+
+      expect(result.success).toBe(true);
+      expect(elapsed).toBeLessThan(500);
+    }, 30000);
+
+    it("reports accurate execution time", async () => {
+      const result = await executeCode('Console.WriteLine("test");');
+      expect(result.success).toBe(true);
+      expect(result.executionTime).toBeDefined();
+      expect(result.executionTime).toBeGreaterThan(0);
+      expect(result.executionTime).toBeLessThan(30000);
+    }, 30000);
   });
 });

@@ -1,15 +1,131 @@
-import { spawn } from "child_process";
-import { writeFile, mkdir, rm } from "fs/promises";
-import { join } from "path";
-import { randomUUID } from "crypto";
-import { tmpdir } from "os";
+import { spawn, ChildProcess } from "child_process";
+import { createInterface, Interface } from "readline";
 import type { SubmissionResult, TestResult, Diagnostic } from "@shared/schema";
-import { INFRASTRUCTURE_ERROR_CODES } from "@shared/schema";
+
+// Roslyn Runner singleton
+let runnerProcess: ChildProcess | null = null;
+let runnerReadline: Interface | null = null;
+let runnerReady = false;
+let pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: any) => void }> = new Map();
+let requestId = 0;
+
+interface RunnerResponse {
+  Success: boolean;
+  Output?: string;
+  Error?: string;
+  Diagnostics?: string[];
+  ExecutionTimeMs: number;
+}
+
+// Start the Roslyn runner process
+export async function startRunner(): Promise<void> {
+  if (runnerProcess && runnerReady) {
+    return;
+  }
+
+  return new Promise((resolve, reject) => {
+    const runnerPath = process.env.ROSLYN_RUNNER_PATH;
+
+    // In production, use the pre-built executable
+    // In development, use dotnet run
+    if (runnerPath) {
+      console.log(`[Runner] Starting Roslyn runner from: ${runnerPath}`);
+      runnerProcess = spawn(runnerPath, [], {
+        stdio: ["pipe", "pipe", "pipe"]
+      });
+    } else {
+      console.log(`[Runner] Starting Roslyn runner via dotnet run (dev mode)`);
+      runnerProcess = spawn("dotnet", ["run", "--project", "./roslyn-runner", "--configuration", "Release"], {
+        stdio: ["pipe", "pipe", "pipe"]
+      });
+    }
+
+    runnerReadline = createInterface({
+      input: runnerProcess.stdout!,
+      crlfDelay: Infinity
+    });
+
+    runnerProcess.stderr?.on("data", (data) => {
+      console.log(`[Runner] ${data.toString().trim()}`);
+    });
+
+    runnerReadline.on("line", (line) => {
+      if (line === "READY") {
+        console.log("[Runner] Roslyn runner is ready");
+        runnerReady = true;
+        resolve();
+        return;
+      }
+
+      // Parse JSON response
+      try {
+        const response = JSON.parse(line) as RunnerResponse;
+        // Get the oldest pending request (FIFO)
+        const [id, handlers] = pendingRequests.entries().next().value || [];
+        if (id !== undefined && handlers) {
+          pendingRequests.delete(id);
+          handlers.resolve(response);
+        }
+      } catch (e) {
+        console.error(`[Runner] Failed to parse response: ${line}`);
+      }
+    });
+
+    runnerProcess.on("error", (err) => {
+      console.error(`[Runner] Process error: ${err.message}`);
+      runnerReady = false;
+      reject(err);
+    });
+
+    runnerProcess.on("exit", (code) => {
+      console.log(`[Runner] Process exited with code ${code}`);
+      runnerReady = false;
+      runnerProcess = null;
+      runnerReadline = null;
+
+      // Reject all pending requests
+      for (const [, handlers] of pendingRequests) {
+        handlers.reject(new Error("Runner process exited"));
+      }
+      pendingRequests.clear();
+    });
+
+    // Timeout for startup
+    setTimeout(() => {
+      if (!runnerReady) {
+        reject(new Error("Runner startup timeout"));
+      }
+    }, 30000);
+  });
+}
+
+// Send code to the runner and get result
+async function runWithRunner(code: string, timeoutMs: number = 30000): Promise<RunnerResponse> {
+  if (!runnerProcess || !runnerReady) {
+    await startRunner();
+  }
+
+  return new Promise((resolve, reject) => {
+    const id = ++requestId;
+
+    const request = JSON.stringify({ Code: code, TimeoutMs: timeoutMs });
+
+    pendingRequests.set(id, { resolve, reject });
+
+    runnerProcess!.stdin!.write(request + "\n");
+
+    // Timeout for this specific request
+    setTimeout(() => {
+      if (pendingRequests.has(id)) {
+        pendingRequests.delete(id);
+        reject(new Error(`Execution timeout after ${timeoutMs}ms`));
+      }
+    }, timeoutMs + 5000);
+  });
+}
 
 // Export for testing
 export function removeMainMethod(code: string): string {
-  // Remove the Main method from the user's code to avoid duplicate Main methods
-  // This regex matches "public static void Main()" and its body
   const mainMethodRegex = /\s*public\s+static\s+void\s+Main\s*\([^)]*\)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/gs;
   return code.replace(mainMethodRegex, '');
 }
@@ -175,50 +291,16 @@ public class TestRunner
 }`;
 }
 
-// Export for testing
-export function runCommand(command: string, args: string[], timeout: number): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(command, args, { timeout });
-
-    let stdout = "";
-    let stderr = "";
-
-    proc.stdout.on("data", (data) => {
-      stdout += data.toString();
-    });
-
-    proc.stderr.on("data", (data) => {
-      stderr += data.toString();
-    });
-
-    proc.on("close", (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr });
-      } else {
-        reject({ stdout, stderr, code });
-      }
-    });
-
-    proc.on("error", (err) => {
-      reject({ stdout, stderr, message: err.message });
-    });
-  });
-}
-
-
-// Export for testing
+// Export for testing - parse Roslyn diagnostics
 export function parseDotnetOutput(output: string): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
-  // Match patterns like: Program.cs(5,12): error CS1002: ; expected
-  const errorPattern = /(?:Program\.cs|[^(]+\.cs)\((\d+),(\d+)\):\s+(error|warning)\s+(\w+):\s+(.+)/gi;
+  // Match patterns like: (5,12): error CS1002: ; expected
+  const errorPattern = /\((\d+),(\d+)\):\s+(error|warning)\s+(\w+):\s+(.+)/gi;
 
   let match;
   while ((match = errorPattern.exec(output)) !== null) {
     const [, line, column, severity, code, message] = match;
-    // Skip infrastructure errors
-    if (INFRASTRUCTURE_ERROR_CODES.has(code)) continue;
-
     diagnostics.push({
       line: parseInt(line, 10),
       column: parseInt(column, 10),
@@ -228,128 +310,107 @@ export function parseDotnetOutput(output: string): Diagnostic[] {
     });
   }
 
-  // Also catch general build errors without line numbers
-  if (diagnostics.length === 0 && output.includes("error")) {
-    const generalErrorPattern = /error\s+(\w+)?:\s*(.+)/gi;
-    while ((match = generalErrorPattern.exec(output)) !== null) {
-      const [, code, message] = match;
-      // Skip infrastructure errors
-      if (code && INFRASTRUCTURE_ERROR_CODES.has(code)) continue;
-      if (message && !message.includes("Build FAILED") && !message.includes("Assets file")) {
-        diagnostics.push({
-          line: 1,
-          column: 1,
-          severity: "error",
-          message: message.trim(),
-          code: code || undefined,
-        });
-      }
-    }
-  }
-
   return diagnostics;
 }
 
+// Check if code has a Main method
+function hasMainMethod(code: string): boolean {
+  const mainPattern = /\bstatic\s+(void|async\s+Task)\s+Main\s*\(/;
+  return mainPattern.test(code);
+}
+
+// Wrap code with a default Main method if missing
+function ensureMainMethod(code: string): string {
+  if (hasMainMethod(code)) {
+    return code;
+  }
+
+  return `${code}
+
+public class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine("Code compiled successfully. Add a Main() method to see output.");
+    }
+}`;
+}
 
 // Execute code without tests
 export async function executeCode(code: string): Promise<{ success: boolean; output: string; error?: string; executionTime?: number }> {
-  const startTime = Date.now();
-  const workDir = join(tmpdir(), `csharp-${randomUUID()}`);
-
   try {
-    await mkdir(workDir, { recursive: true });
-
-    const programPath = join(workDir, "Program.cs");
-    await writeFile(programPath, code);
-
-    const csprojContent = `<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-</Project>`;
-
-    await writeFile(join(workDir, "Program.csproj"), csprojContent);
-
-    console.log(`[dotnet] Executing code in ${workDir}`);
-    const output = await runCommand("dotnet", ["run", "--project", workDir], 30000);
-    const executionTime = Date.now() - startTime;
-    console.log(`[dotnet] Success - stdout: ${output.stdout.substring(0, 200)}`);
+    const codeWithMain = ensureMainMethod(code);
+    const response = await runWithRunner(codeWithMain, 30000);
 
     return {
-      success: true,
-      output: output.stdout,
-      error: output.stderr || undefined,
-      executionTime
+      success: response.Success,
+      output: response.Output || "",
+      error: response.Error,
+      executionTime: response.ExecutionTimeMs
     };
   } catch (error: any) {
-    const executionTime = Date.now() - startTime;
-    const fullError = [error.stdout, error.stderr, error.message].filter(Boolean).join('\n');
-    console.log(`[dotnet] Error - code: ${error.code}, stderr: ${error.stderr?.substring(0, 500)}, stdout: ${error.stdout?.substring(0, 500)}`);
     return {
       success: false,
-      output: error.stdout || "",
-      error: fullError || "Execution failed",
-      executionTime
+      output: "",
+      error: error.message || "Execution failed"
     };
-  } finally {
-    try {
-      await rm(workDir, { recursive: true, force: true });
-    } catch {
-      // Cleanup failure is non-critical
-    }
   }
 }
 
 // Get diagnostics by compiling the code (without running)
 export async function getDiagnostics(code: string): Promise<{ diagnostics: Diagnostic[] }> {
-  const workDir = join(tmpdir(), `csharp-diag-${randomUUID()}`);
-
   try {
-    await mkdir(workDir, { recursive: true });
+    // Use the runner but we only care about compilation errors
+    const response = await runWithRunner(code, 20000);
 
-    const programPath = join(workDir, "Program.cs");
-    await writeFile(programPath, code);
-
-    const csprojContent = `<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-</Project>`;
-
-    await writeFile(join(workDir, "Program.csproj"), csprojContent);
-
-    try {
-      await runCommand("dotnet", ["build", workDir, "-v", "q"], 20000);
+    if (response.Success) {
       return { diagnostics: [] };
-    } catch (error: any) {
-      const diagnostics = parseDotnetOutput(error.stdout + "\n" + error.stderr);
-      return { diagnostics };
     }
-  } finally {
-    try {
-      await rm(workDir, { recursive: true, force: true });
-    } catch {
-      // Cleanup failure is non-critical
+
+    // Parse diagnostics from error output
+    const diagnostics = response.Diagnostics?.map(d => {
+      const match = d.match(/\((\d+),(\d+)\):\s+(error|warning)\s+(\w+):\s+(.+)/i);
+      if (match) {
+        return {
+          line: parseInt(match[1], 10),
+          column: parseInt(match[2], 10),
+          severity: match[3].toLowerCase() as "error" | "warning",
+          message: match[5].trim(),
+          code: match[4],
+        };
+      }
+      return {
+        line: 1,
+        column: 1,
+        severity: "error" as const,
+        message: d,
+      };
+    }) || [];
+
+    // Fallback: parse from Error string if Diagnostics is empty
+    if (diagnostics.length === 0 && response.Error) {
+      return { diagnostics: parseDotnetOutput(response.Error) };
     }
+
+    return { diagnostics };
+  } catch (error: any) {
+    return {
+      diagnostics: [{
+        line: 1,
+        column: 1,
+        severity: "error",
+        message: error.message || "Failed to get diagnostics"
+      }]
+    };
   }
 }
 
-// Run a single test
+// Run a single test using the runner
 async function runSingleTest(
-  workDir: string,
   code: string,
   lessonId: string,
   test: { name: string; input?: any; expected?: any; a?: number; b?: number; f?: string; g?: string }
 ): Promise<TestResult> {
-  const testDir = join(workDir, randomUUID());
-  await mkdir(testDir, { recursive: true });
-
   try {
     let testProgram: string;
 
@@ -373,42 +434,23 @@ async function runSingleTest(
         throw new Error(`Unknown lesson: ${lessonId}`);
     }
 
-    await writeFile(join(testDir, "Program.cs"), testProgram);
+    const response = await runWithRunner(testProgram, 15000);
 
-    const csprojContent = `<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-</Project>`;
-
-    await writeFile(join(testDir, "Test.csproj"), csprojContent);
-
-    const result = await runCommand("dotnet", ["run", "--project", testDir], 15000);
-
-    if (result.stdout.trim() === "PASS") {
+    if (response.Success && response.Output?.trim() === "PASS") {
       return { name: test.name, passed: true };
     } else {
       return {
         name: test.name,
         passed: false,
-        message: result.stdout.trim() || result.stderr.trim() || "Test failed"
+        message: response.Output?.trim() || response.Error || "Test failed"
       };
     }
   } catch (error: any) {
     return {
       name: test.name,
       passed: false,
-      message: error.stderr || error.message || "Compilation or runtime error"
+      message: error.message || "Compilation or runtime error"
     };
-  } finally {
-    try {
-      await rm(testDir, { recursive: true, force: true });
-    } catch {
-      // Cleanup failure is non-critical
-    }
   }
 }
 
@@ -416,7 +458,7 @@ async function runSingleTest(
 export async function runTests(
   code: string,
   lessonId: string,
-  lessonTitle: string,
+  _lessonTitle: string,
   testCodeJson: string,
   hints: Record<string, string>
 ): Promise<SubmissionResult> {
@@ -433,22 +475,10 @@ export async function runTests(
   const results: TestResult[] = [];
   let passedCount = 0;
 
-  const workDir = join(tmpdir(), `csharp-test-${randomUUID()}`);
-
-  try {
-    await mkdir(workDir, { recursive: true });
-
-    for (const test of tests) {
-      const testResult = await runSingleTest(workDir, code, lessonId, test);
-      results.push(testResult);
-      if (testResult.passed) passedCount++;
-    }
-  } finally {
-    try {
-      await rm(workDir, { recursive: true, force: true });
-    } catch {
-      // Cleanup failure is non-critical
-    }
+  for (const test of tests) {
+    const testResult = await runSingleTest(code, lessonId, test);
+    results.push(testResult);
+    if (testResult.passed) passedCount++;
   }
 
   const failedTests = results.filter(r => !r.passed);

@@ -16,7 +16,7 @@ COPY . .
 # Build the application
 RUN bun run build
 
-# Stage 2: Production with .NET SDK and Bun
+# Stage 2: Production with .NET 9 SDK and Bun
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS production
 
 # Install Bun
@@ -31,15 +31,19 @@ ENV PATH="$BUN_INSTALL/bin:$PATH"
 
 WORKDIR /app
 
+# Copy Roslyn runner source and build it
+COPY roslyn-runner/ ./roslyn-runner/
+RUN dotnet publish ./roslyn-runner/RoslynRunner.csproj \
+    -c Release \
+    -o /app/roslyn-runner-bin
+
 # Copy built artifacts from builder stage
 COPY --from=builder /app/dist ./dist
-
-# Create temp directory for code execution
-RUN mkdir -p /tmp/csharp-runner
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV ROSLYN_RUNNER_PATH=/app/roslyn-runner-bin/RoslynRunner
 
 # Expose port
 EXPOSE 8080
