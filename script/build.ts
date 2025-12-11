@@ -19,7 +19,6 @@ async function buildAll() {
         alias: {
           "@": "./client/src",
           "@shared": "./shared",
-          "@assets": "./attached_assets",
         },
       },
       html: {
