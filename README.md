@@ -25,40 +25,42 @@ An auto-graded learning platform for modern C# with a focus on functional progra
 
 ## Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite, TailwindCSS
+- **Frontend**: React 18, TypeScript, TailwindCSS
 - **Code Editor**: Monaco Editor with custom C# completions
-- **Backend**: Express.js, Drizzle ORM
-- **Database**: PostgreSQL
-- **Runtime**: .NET 10 for C# code execution
-- **Testing**: Vitest
+- **Backend**: Hono (TypeScript)
+- **Runtime**: Bun + .NET 9 (Roslyn Scripting API) for C# code execution
+- **Testing**: Bun test
 
 ## Prerequisites
 
-- Node.js 20+
-- .NET SDK 10.0+
-- PostgreSQL 14+
+- Bun 1.0+
+- .NET SDK 9.0+
+
+### Installing .NET 9 SDK
+
+The RoslynRunner targets `net9.0`. On Ubuntu 22.04:
+
+```bash
+wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O /tmp/msprod.deb
+sudo dpkg -i /tmp/msprod.deb
+sudo apt update
+sudo apt install -y dotnet-sdk-9.0
+```
+
+The repo includes a `global.json` that pins the SDK version to ensure CI/CLI picks the correct one.
+
+> **Note:** If your environment only offers .NET 8, you can temporarily retarget the runner to `net8.0` in `roslyn-runner/RoslynRunner.csproj`. However, installing SDK 9 is preferred to stay aligned with the ADR.
 
 ## Setup
 
 1. **Install dependencies**:
    ```bash
-   npm install
+   bun install
    ```
 
-2. **Configure database**:
-   Create a PostgreSQL database and set the connection string:
+2. **Start development server**:
    ```bash
-   export DATABASE_URL="postgresql://localhost:5432/expert_builder"
-   ```
-
-3. **Push database schema**:
-   ```bash
-   npm run db:push
-   ```
-
-4. **Start development server**:
-   ```bash
-   npm run dev
+   bun run dev
    ```
 
    The app will be available at http://localhost:5000
@@ -67,14 +69,11 @@ An auto-graded learning platform for modern C# with a focus on functional progra
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server with hot reload |
-| `npm run build` | Build for production |
-| `npm start` | Run production build |
-| `npm run check` | Type-check TypeScript |
-| `npm test` | Run test suite |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run test:coverage` | Run tests with coverage report |
-| `npm run db:push` | Push schema changes to database |
+| `bun run dev` | Start development server with hot reload |
+| `bun run build` | Build for production |
+| `bun run start` | Run production build |
+| `bun run check` | Type-check TypeScript |
+| `bun test` | Run test suite |
 
 ## Project Structure
 
@@ -87,63 +86,46 @@ An auto-graded learning platform for modern C# with a focus on functional progra
 │       │   └── output-panel.tsx
 │       └── lib/
 │           └── csharp-completions.ts
-├── server/               # Express backend
+├── server/               # Hono backend
 │   ├── routes.ts         # API endpoints
 │   ├── grading.ts        # C# execution and grading logic
-│   ├── storage.ts        # Database operations
-│   ├── ai-tutor.ts       # Hint generation (stub)
+│   ├── storage.ts        # Lesson data access
 │   └── tests/            # Backend tests
-├── shared/               # Shared types
-│   └── schema.ts         # Zod schemas and TypeScript types
-└── vitest.config.ts      # Test configuration
+├── roslyn-runner/        # Persistent .NET code executor
+│   └── Program.cs        # Roslyn Scripting API runner
+└── shared/               # Shared types
+    └── schema.ts         # Zod schemas and TypeScript types
 ```
 
 ## API Endpoints
 
-### Learner API
-- `GET /api/lessons` - List all lessons (without solutions)
+- `GET /api/lessons` - List all lessons
 - `GET /api/lessons/:id` - Get specific lesson
-- `POST /api/execute` - Execute C# code (without grading)
+- `POST /api/execute` - Execute C# code
 - `POST /api/diagnostics` - Get compile-time diagnostics
 - `POST /api/submit` - Submit code for grading
-- `GET /api/progress` - Get learner progress
-- `GET /api/progress/:lessonId` - Get progress for specific lesson
-
-### Instructor API
-- `GET /api/instructor/lessons` - List all lessons (with solutions)
-- `GET /api/instructor/lessons/:id` - Get lesson with solution and tests
-- `POST /api/instructor/lessons` - Create new lesson
-- `PATCH /api/instructor/lessons/:id` - Update lesson
-- `DELETE /api/instructor/lessons/:id` - Delete lesson
 
 ## C# Code Execution
 
-The grading pipeline:
-1. Creates an isolated temp directory for each submission
-2. Writes the student code to `Program.cs`
-3. Creates a `.csproj` targeting .NET 10
-4. Runs `dotnet run` to execute code or `dotnet build` for diagnostics
-5. Parses output to extract results or errors
-6. Cleans up temp directory
+The grading pipeline uses a persistent Roslyn Scripting API runner for fast execution (~30-150ms):
+
+1. Server sends code to the Roslyn runner via stdin/stdout JSON protocol
+2. Runner compiles and executes using Roslyn Scripting API (warm context)
+3. Captures console output and compiler diagnostics
+4. Returns results as JSON response
+
+See [ADR-001](docs/adr/001-roslyn-runner-for-code-execution.md) for architecture details.
 
 ## Running Tests
 
 ```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run with coverage
-npm run test:coverage
+bun test
 ```
 
 Test coverage includes:
-- Unit tests for test generation functions
-- Unit tests for diagnostic parsing
 - Integration tests for C# code execution
-- API endpoint tests
+- Multi-class code execution tests
+- Security/sandboxing tests
 
 ## Lessons
 
@@ -156,9 +138,9 @@ Each lesson includes:
 
 ## Development Notes
 
-- Uses hardcoded demo user (no authentication implemented)
-- AI tutor returns static hints (no AI API integration)
-- Diagnostics may include build infrastructure warnings in addition to code errors
+- Lessons are stored as static TypeScript data
+- Hints are provided inline in grading logic
+- Diagnostics come from Roslyn compiler
 
 ## License
 

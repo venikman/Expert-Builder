@@ -1,43 +1,147 @@
-using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 
-var builder = WebApplication.CreateBuilder(args);
-var app = builder.Build();
-
-// Pre-warm Roslyn on startup
-var warmupTask = Task.Run(async () =>
-{
-    var sw = Stopwatch.StartNew();
-    try
-    {
-        await CSharpScript.EvaluateAsync("1 + 1", ScriptOptions.Default);
-        Console.WriteLine($"[Roslyn] Warmed up in {sw.ElapsedMilliseconds}ms");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Roslyn] Warmup failed: {ex.Message}");
-    }
-});
-
-// Shared script options with common imports
-var scriptOptions = ScriptOptions.Default
-    .WithImports(
-        "System",
-        "System.Collections.Generic",
-        "System.Linq",
-        "System.Text"
-    )
+// Warm up Roslyn on startup
+Console.Error.WriteLine("[RoslynRunner] Starting up...");
+var warmupOptions = ScriptOptions.Default
+    .WithImports("System", "System.Collections.Generic", "System.Linq", "System.Text")
     .WithReferences(
         typeof(object).Assembly,
         typeof(Console).Assembly,
-        typeof(Enumerable).Assembly
+        typeof(Enumerable).Assembly,
+        typeof(List<>).Assembly
     );
 
-app.MapPost("/execute", async (ExecuteRequest request) =>
+// Warm-up compilation
+try
 {
-    var sw = Stopwatch.StartNew();
+    await CSharpScript.EvaluateAsync("1 + 1", warmupOptions);
+    Console.Error.WriteLine("[RoslynRunner] Warm-up complete, ready for requests");
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"[RoslynRunner] Warm-up failed: {ex.Message}");
+}
+
+// Signal ready
+Console.WriteLine("READY");
+Console.Out.Flush();
+
+// JSON options with more permissive settings
+var jsonOptions = new JsonSerializerOptions
+{
+    PropertyNameCaseInsensitive = true,
+    AllowTrailingCommas = true
+};
+
+// Process requests
+while (true)
+{
+    var line = Console.ReadLine();
+    if (line == null) break;
+
+    try
+    {
+        var request = JsonSerializer.Deserialize<ExecuteRequest>(line, jsonOptions);
+        if (request == null)
+        {
+            SendResponse(new ExecuteResponse { Success = false, Error = "Invalid request" });
+            continue;
+        }
+
+        ExecuteResponse result;
+        if (request.CompileOnly)
+        {
+            result = CompileCode(request.Code, request.TimeoutMs);
+        }
+        else
+        {
+            result = await ExecuteCode(request.Code, request.TimeoutMs);
+        }
+        SendResponse(result);
+    }
+    catch (Exception ex)
+    {
+        SendResponse(new ExecuteResponse { Success = false, Error = ex.Message });
+    }
+}
+
+static void SendResponse(ExecuteResponse response)
+{
+    var json = JsonSerializer.Serialize(response);
+    Console.WriteLine(json);
+    Console.Out.Flush();
+}
+
+// Compile-only: returns diagnostics without executing code
+static ExecuteResponse CompileCode(string code, int timeoutMs)
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+
+    try
+    {
+        var options = ScriptOptions.Default
+            .WithImports("System", "System.Collections.Generic", "System.Linq", "System.Text")
+            .WithReferences(
+                typeof(object).Assembly,
+                typeof(Console).Assembly,
+                typeof(Enumerable).Assembly,
+                typeof(List<>).Assembly
+            );
+
+        using var cts = new CancellationTokenSource(timeoutMs);
+        var script = CSharpScript.Create(code, options);
+        var compilation = script.Compile(cts.Token);
+
+        if (compilation.Any(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error))
+        {
+            var diagnostics = compilation
+                .Where(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+                .Select(d => FormatDiagnostic(d, code))
+                .ToList();
+
+            return new ExecuteResponse
+            {
+                Success = false,
+                Error = string.Join("\n", diagnostics),
+                Diagnostics = diagnostics,
+                ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+            };
+        }
+
+        return new ExecuteResponse
+        {
+            Success = true,
+            Output = "",
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+    catch (CompilationErrorException ex)
+    {
+        return new ExecuteResponse
+        {
+            Success = false,
+            Error = string.Join("\n", ex.Diagnostics.Select(d => FormatDiagnostic(d, code))),
+            Diagnostics = ex.Diagnostics.Select(d => FormatDiagnostic(d, code)).ToList(),
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+    catch (Exception ex)
+    {
+        return new ExecuteResponse
+        {
+            Success = false,
+            Error = ex.Message,
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+}
+
+static async Task<ExecuteResponse> ExecuteCode(string code, int timeoutMs)
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
     var output = new StringBuilder();
     var errors = new StringBuilder();
 
@@ -45,155 +149,185 @@ app.MapPost("/execute", async (ExecuteRequest request) =>
     {
         // Capture Console.WriteLine output
         var originalOut = Console.Out;
-        var originalErr = Console.Error;
+        var originalError = Console.Error;
 
-        using var outWriter = new StringWriter(output);
-        using var errWriter = new StringWriter(errors);
+        using var outputWriter = new StringWriter(output);
+        using var errorWriter = new StringWriter(errors);
 
-        Console.SetOut(outWriter);
-        Console.SetError(errWriter);
+        Console.SetOut(outputWriter);
+        Console.SetError(errorWriter);
 
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(request.TimeoutSeconds ?? 5));
+            var options = ScriptOptions.Default
+                .WithImports(
+                    "System",
+                    "System.Collections.Generic",
+                    "System.Linq",
+                    "System.Text"
+                )
+                .WithReferences(
+                    typeof(object).Assembly,
+                    typeof(Console).Assembly,
+                    typeof(Enumerable).Assembly,
+                    typeof(List<>).Assembly
+                );
 
-            // Wrap user code to handle both expressions and statements
-            var code = WrapCode(request.Code);
+            var wrappedCode = WrapCode(code);
 
-            await CSharpScript.EvaluateAsync(
-                code,
-                scriptOptions,
-                cancellationToken: cts.Token
-            );
+            using var cts = new CancellationTokenSource(timeoutMs);
+
+            var script = CSharpScript.Create(wrappedCode, options);
+            var compilation = script.Compile(cts.Token);
+
+            if (compilation.Any(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error))
+            {
+                var diagnostics = compilation
+                    .Where(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+                    .Select(d => FormatDiagnostic(d, code))
+                    .ToList();
+
+                return new ExecuteResponse
+                {
+                    Success = false,
+                    Error = string.Join("\n", diagnostics),
+                    Diagnostics = diagnostics,
+                    ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+                };
+            }
+
+            await script.RunAsync(cancellationToken: cts.Token);
         }
         finally
         {
             Console.SetOut(originalOut);
-            Console.SetError(originalErr);
+            Console.SetError(originalError);
         }
 
-        return Results.Ok(new ExecuteResponse(
-            Success: true,
-            Output: output.ToString(),
-            Error: errors.Length > 0 ? errors.ToString() : null,
-            ExecutionTimeMs: sw.ElapsedMilliseconds
-        ));
+        sw.Stop();
+        return new ExecuteResponse
+        {
+            Success = true,
+            Output = output.ToString(),
+            Error = errors.Length > 0 ? errors.ToString() : null,
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
     }
     catch (CompilationErrorException ex)
     {
-        var diagnostics = ex.Diagnostics
-            .Select(d => new DiagnosticInfo(
-                Line: d.Location.GetLineSpan().StartLinePosition.Line + 1,
-                Column: d.Location.GetLineSpan().StartLinePosition.Character + 1,
-                Severity: d.Severity.ToString().ToLower(),
-                Message: d.GetMessage(),
-                Code: d.Id
-            ))
-            .ToArray();
-
-        return Results.Ok(new ExecuteResponse(
-            Success: false,
-            Output: output.ToString(),
-            Error: string.Join("\n", ex.Diagnostics.Select(d => d.GetMessage())),
-            ExecutionTimeMs: sw.ElapsedMilliseconds,
-            Diagnostics: diagnostics
-        ));
+        return new ExecuteResponse
+        {
+            Success = false,
+            Error = string.Join("\n", ex.Diagnostics.Select(d => FormatDiagnostic(d, code))),
+            Diagnostics = ex.Diagnostics.Select(d => FormatDiagnostic(d, code)).ToList(),
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
     }
     catch (OperationCanceledException)
     {
-        return Results.Ok(new ExecuteResponse(
-            Success: false,
-            Output: output.ToString(),
-            Error: "Execution timed out",
-            ExecutionTimeMs: sw.ElapsedMilliseconds
-        ));
+        return new ExecuteResponse
+        {
+            Success = false,
+            Output = output.ToString(),
+            Error = $"Execution timed out after {timeoutMs}ms",
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
     }
     catch (Exception ex)
     {
-        return Results.Ok(new ExecuteResponse(
-            Success: false,
-            Output: output.ToString(),
-            Error: ex.Message,
-            ExecutionTimeMs: sw.ElapsedMilliseconds
-        ));
+        return new ExecuteResponse
+        {
+            Success = false,
+            Output = output.ToString(),
+            Error = ex.InnerException?.Message ?? ex.Message,
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
     }
-});
+}
 
-app.MapPost("/diagnostics", async (DiagnosticsRequest request) =>
-{
-    var sw = Stopwatch.StartNew();
-
-    try
-    {
-        var code = WrapCode(request.Code);
-        var script = CSharpScript.Create(code, scriptOptions);
-        var compilation = script.GetCompilation();
-
-        var diagnostics = compilation.GetDiagnostics()
-            .Where(d => d.Severity >= Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
-            .Select(d => new DiagnosticInfo(
-                Line: d.Location.GetLineSpan().StartLinePosition.Line + 1,
-                Column: d.Location.GetLineSpan().StartLinePosition.Character + 1,
-                Severity: d.Severity.ToString().ToLower(),
-                Message: d.GetMessage(),
-                Code: d.Id
-            ))
-            .ToArray();
-
-        return Results.Ok(new DiagnosticsResponse(
-            Diagnostics: diagnostics,
-            ExecutionTimeMs: sw.ElapsedMilliseconds
-        ));
-    }
-    catch (Exception ex)
-    {
-        return Results.Ok(new DiagnosticsResponse(
-            Diagnostics: [new DiagnosticInfo(1, 1, "error", ex.Message, "EX0001")],
-            ExecutionTimeMs: sw.ElapsedMilliseconds
-        ));
-    }
-});
-
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
-
-await warmupTask;
-app.Run();
-
-// Wrap code that contains class definitions to be executable as a script
 static string WrapCode(string code)
 {
-    // If code has a Main method, extract and call it
+    // Check if code contains a class with Main method
     if (code.Contains("static void Main") || code.Contains("static async Task Main"))
     {
-        // For full programs with Main, we need to find and invoke Main
-        return $$"""
-            {{code}}
+        // Find the class that contains Main - look for TestRunner first (for tests),
+        // otherwise use the class right before "static void Main"
+        string? className = null;
+        bool hasArgs = false;
 
-            // Find and invoke Main
-            var types = new[] { typeof(Program), typeof(Exercise) }
-                .Concat(AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return Array.Empty<Type>(); } }))
-                .Where(t => t != null);
+        // Check for TestRunner class (used in test harnesses)
+        if (code.Contains("class TestRunner"))
+        {
+            className = "TestRunner";
+        }
+        else
+        {
+            // Find the last class declaration before "static void Main"
+            var mainIndex = code.IndexOf("static void Main");
+            if (mainIndex == -1) mainIndex = code.IndexOf("static async Task Main");
 
-            foreach (var type in types)
+            if (mainIndex > 0)
             {
-                var main = type.GetMethod("Main",
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                if (main != null)
+                var codeBeforeMain = code.Substring(0, mainIndex);
+                var classMatches = System.Text.RegularExpressions.Regex.Matches(
+                    codeBeforeMain,
+                    @"(?:public\s+)?class\s+(\w+)"
+                );
+
+                if (classMatches.Count > 0)
                 {
-                    var result = main.Invoke(null, main.GetParameters().Length > 0 ? new object[] { Array.Empty<string>() } : null);
-                    if (result is Task task) await task;
-                    break;
+                    className = classMatches[classMatches.Count - 1].Groups[1].Value;
                 }
             }
-            """;
+        }
+
+        // Check if Main takes string[] args parameter
+        hasArgs = System.Text.RegularExpressions.Regex.IsMatch(
+            code,
+            @"static\s+(void|async\s+Task)\s+Main\s*\(\s*string\s*\[\s*\]\s+\w+"
+        );
+
+        if (className != null)
+        {
+            // Return code that defines the class and calls Main with appropriate signature
+            var mainCall = hasArgs ? $"{className}.Main(Array.Empty<string>());" : $"{className}.Main();";
+            return $@"
+{code}
+
+{mainCall}
+";
+        }
     }
 
+    // For script-style code, return as-is
     return code;
 }
 
-record ExecuteRequest(string Code, int? TimeoutSeconds = 5);
-record ExecuteResponse(bool Success, string Output, string? Error, long ExecutionTimeMs, DiagnosticInfo[]? Diagnostics = null);
-record DiagnosticsRequest(string Code);
-record DiagnosticsResponse(DiagnosticInfo[] Diagnostics, long ExecutionTimeMs);
-record DiagnosticInfo(int Line, int Column, string Severity, string Message, string Code);
+static string FormatDiagnostic(Microsoft.CodeAnalysis.Diagnostic d, string originalCode)
+{
+    var lineSpan = d.Location.GetLineSpan();
+    var line = lineSpan.StartLinePosition.Line + 1;
+    var col = lineSpan.StartLinePosition.Character + 1;
+
+    // Adjust line numbers for wrapped code
+    var severity = d.Severity.ToString().ToLower();
+    var codeId = d.Id;
+
+    return $"({line},{col}): {severity} {codeId}: {d.GetMessage()}";
+}
+
+record ExecuteRequest
+{
+    public string Code { get; init; } = "";
+    public int TimeoutMs { get; init; } = 30000;
+    public bool CompileOnly { get; init; } = false;
+}
+
+record ExecuteResponse
+{
+    public bool Success { get; init; }
+    public string? Output { get; init; }
+    public string? Error { get; init; }
+    public List<string>? Diagnostics { get; init; }
+    public int ExecutionTimeMs { get; init; }
+}

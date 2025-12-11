@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-commit hook: run tests before allowing commit
+
+echo "Running tests..."
+bun test server/tests/grading.test.ts --timeout 120000
+
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed. Commit aborted."
+    exit 1
+fi
+
+echo "✅ Tests passed."

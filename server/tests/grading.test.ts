@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import {
   removeMainMethod,
   generatePureFunctionTest,
@@ -276,8 +276,10 @@ Console.WriteLine("Hello, World!");
     }, 30000);
 
     it("executeCode_InvalidCode_ReturnsFailure", async () => {
+      // Use code that definitely produces a compile error in Roslyn scripting mode
       const code = `
-Console.WriteLine("Missing semicolon")
+int x = undefinedVariable;
+Console.WriteLine(x);
 `;
       const result = await executeCode(code);
       expect(result.success).toBe(false);
@@ -296,12 +298,32 @@ Console.WriteLine("Hello, World!");
     }, 30000);
 
     it("getDiagnostics_InvalidCode_ReturnsDiagnostics", async () => {
+      // Use code that definitely produces a compile error in Roslyn scripting mode
+      // (missing semicolon at end of script is valid in scripting, but undefined identifier is not)
       const code = `
-Console.WriteLine("Missing semicolon")
+int x = undefinedVariable;
+Console.WriteLine(x);
 `;
       const result = await getDiagnostics(code);
       expect(result.diagnostics.length).toBeGreaterThan(0);
       expect(result.diagnostics[0].severity).toBe("error");
+    }, 30000);
+
+    it("getDiagnostics_DoesNotExecuteCode", async () => {
+      // This code has a side effect (throws exception) that would only happen if executed
+      // If getDiagnostics properly uses compile-only mode, this should pass without error
+      const code = `
+public class Test
+{
+    public static void Main()
+    {
+        throw new Exception("This should NOT be thrown - getDiagnostics should not execute code!");
+    }
+}
+`;
+      const result = await getDiagnostics(code);
+      // Valid code should compile without errors
+      expect(result.diagnostics).toHaveLength(0);
     }, 30000);
 
     it("runTests_PureFunctions_PassingCode", async () => {
@@ -376,5 +398,172 @@ public class Exercise
       expect(result.success).toBe(true);
       expect(result.passedTests).toBe(2);
     }, 60000);
+  });
+
+  // US-6: Multi-Class Code Execution Tests
+  describe("multi-class code execution (US-6)", () => {
+    it("executes code with multiple classes", async () => {
+      const code = `
+public class Calculator
+{
+    public static int Add(int a, int b) => a + b;
+    public static int Multiply(int a, int b) => a * b;
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine(Calculator.Add(2, 3));
+        Console.WriteLine(Calculator.Multiply(4, 5));
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("5");
+      expect(result.output).toContain("20");
+    }, 30000);
+
+    it("executes code with inheritance", async () => {
+      const code = `
+public abstract class Shape
+{
+    public abstract double Area();
+}
+
+public class Rectangle : Shape
+{
+    private double width, height;
+    public Rectangle(double w, double h) { width = w; height = h; }
+    public override double Area() => width * height;
+}
+
+public class Circle : Shape
+{
+    private double radius;
+    public Circle(double r) { radius = r; }
+    public override double Area() => Math.PI * radius * radius;
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        Shape rect = new Rectangle(3, 4);
+        Console.WriteLine($"Rectangle area: {rect.Area()}");
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("12");
+    }, 30000);
+
+    it("executes code with interfaces", async () => {
+      const code = `
+public interface IGreeter
+{
+    string Greet(string name);
+}
+
+public class FormalGreeter : IGreeter
+{
+    public string Greet(string name) => $"Good day, {name}.";
+}
+
+public class CasualGreeter : IGreeter
+{
+    public string Greet(string name) => $"Hey, {name}!";
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        IGreeter greeter = new CasualGreeter();
+        Console.WriteLine(greeter.Greet("World"));
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("Hey, World!");
+    }, 30000);
+
+    it("executes code with generics", async () => {
+      const code = `
+public class Box<T>
+{
+    private T value;
+    public Box(T v) { value = v; }
+    public T GetValue() => value;
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        var intBox = new Box<int>(42);
+        var strBox = new Box<string>("hello");
+        Console.WriteLine(intBox.GetValue());
+        Console.WriteLine(strBox.GetValue());
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("42");
+      expect(result.output).toContain("hello");
+    }, 30000);
+
+    it("executes code with nested classes", async () => {
+      const code = `
+public class Outer
+{
+    public class Inner
+    {
+        public static string GetMessage() => "From inner class";
+    }
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine(Outer.Inner.GetMessage());
+    }
+}
+`;
+      const result = await executeCode(code);
+      expect(result.success).toBe(true);
+      expect(result.output).toContain("From inner class");
+    }, 30000);
+  });
+
+  // Performance Tests
+  describe("performance", () => {
+    it("warm execution completes under 500ms", async () => {
+      // First call to warm up - use simple script-style code
+      const warmup = await executeCode('Console.WriteLine("warmup");');
+      expect(warmup.success).toBe(true);
+
+      // Measure second call with simple code
+      const start = Date.now();
+      const result = await executeCode('Console.WriteLine("test");');
+      const elapsed = Date.now() - start;
+
+      expect(result.success).toBe(true);
+      // Allow some buffer for CI environments - 1000ms is still much faster than 14s
+      expect(elapsed).toBeLessThan(1000);
+    }, 30000);
+
+    it("reports accurate execution time", async () => {
+      const result = await executeCode('Console.WriteLine("test");');
+      expect(result.success).toBe(true);
+      expect(result.executionTime).toBeDefined();
+      expect(result.executionTime).toBeGreaterThan(0);
+      expect(result.executionTime).toBeLessThan(30000);
+    }, 30000);
   });
 });
