@@ -524,39 +524,6 @@ public class Program
     }, 30000);
   });
 
-  // US-7: Security Protection Tests
-  // Note: Full sandboxing is a non-goal for MVP (trusted user environment)
-  // These tests verify basic safety behavior without full isolation
-  describe("security protection (US-7)", () => {
-    // Skipped: infinite loop test breaks the persistent runner for subsequent tests
-    // The runner process needs to be killed/restarted after timeout, which isn't implemented yet
-    it.skip("handles timeout for infinite loops", async () => {
-      // Skipped: breaks runner state for subsequent tests
-    });
-
-    // File system, process, and network tests are skipped for now
-    // Full sandboxing is a non-goal per feature spec (trusted user environment)
-    it.skip("prevents file system access", async () => {
-      // Skipped: sandboxing not implemented in MVP
-    });
-
-    it.skip("prevents process spawning", async () => {
-      // Skipped: sandboxing not implemented in MVP
-    });
-
-    it.skip("prevents network access", async () => {
-      // Skipped: sandboxing not implemented in MVP
-    });
-
-    it.skip("handles memory exhaustion gracefully", async () => {
-      // Skipped: memory limits not implemented in MVP
-    });
-
-    it.skip("prevents environment variable access", async () => {
-      // Skipped: in trusted mode, env access is allowed per design
-    });
-  });
-
   // Performance Tests
   describe("performance", () => {
     it("warm execution completes under 500ms", async () => {
