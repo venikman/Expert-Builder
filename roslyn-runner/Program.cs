@@ -51,7 +51,15 @@ while (true)
             continue;
         }
 
-        var result = await ExecuteCode(request.Code, request.TimeoutMs);
+        ExecuteResponse result;
+        if (request.CompileOnly)
+        {
+            result = CompileCode(request.Code, request.TimeoutMs);
+        }
+        else
+        {
+            result = await ExecuteCode(request.Code, request.TimeoutMs);
+        }
         SendResponse(result);
     }
     catch (Exception ex)
@@ -65,6 +73,70 @@ static void SendResponse(ExecuteResponse response)
     var json = JsonSerializer.Serialize(response);
     Console.WriteLine(json);
     Console.Out.Flush();
+}
+
+// Compile-only: returns diagnostics without executing code
+static ExecuteResponse CompileCode(string code, int timeoutMs)
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+
+    try
+    {
+        var options = ScriptOptions.Default
+            .WithImports("System", "System.Collections.Generic", "System.Linq", "System.Text")
+            .WithReferences(
+                typeof(object).Assembly,
+                typeof(Console).Assembly,
+                typeof(Enumerable).Assembly,
+                typeof(List<>).Assembly
+            );
+
+        using var cts = new CancellationTokenSource(timeoutMs);
+        var script = CSharpScript.Create(code, options);
+        var compilation = script.Compile(cts.Token);
+
+        if (compilation.Any(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error))
+        {
+            var diagnostics = compilation
+                .Where(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+                .Select(d => FormatDiagnostic(d, code))
+                .ToList();
+
+            return new ExecuteResponse
+            {
+                Success = false,
+                Error = string.Join("\n", diagnostics),
+                Diagnostics = diagnostics,
+                ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+            };
+        }
+
+        return new ExecuteResponse
+        {
+            Success = true,
+            Output = "",
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+    catch (CompilationErrorException ex)
+    {
+        return new ExecuteResponse
+        {
+            Success = false,
+            Error = string.Join("\n", ex.Diagnostics.Select(d => FormatDiagnostic(d, code))),
+            Diagnostics = ex.Diagnostics.Select(d => FormatDiagnostic(d, code)).ToList(),
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+    catch (Exception ex)
+    {
+        return new ExecuteResponse
+        {
+            Success = false,
+            Error = ex.Message,
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
 }
 
 static async Task<ExecuteResponse> ExecuteCode(string code, int timeoutMs)
@@ -101,7 +173,6 @@ static async Task<ExecuteResponse> ExecuteCode(string code, int timeoutMs)
                     typeof(List<>).Assembly
                 );
 
-            // Wrap code to handle both class-based and script-style code
             var wrappedCode = WrapCode(code);
 
             using var cts = new CancellationTokenSource(timeoutMs);
@@ -249,6 +320,7 @@ record ExecuteRequest
 {
     public string Code { get; init; } = "";
     public int TimeoutMs { get; init; } = 30000;
+    public bool CompileOnly { get; init; } = false;
 }
 
 record ExecuteResponse

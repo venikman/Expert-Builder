@@ -309,6 +309,23 @@ Console.WriteLine(x);
       expect(result.diagnostics[0].severity).toBe("error");
     }, 30000);
 
+    it("getDiagnostics_DoesNotExecuteCode", async () => {
+      // This code has a side effect (throws exception) that would only happen if executed
+      // If getDiagnostics properly uses compile-only mode, this should pass without error
+      const code = `
+public class Test
+{
+    public static void Main()
+    {
+        throw new Exception("This should NOT be thrown - getDiagnostics should not execute code!");
+    }
+}
+`;
+      const result = await getDiagnostics(code);
+      // Valid code should compile without errors
+      expect(result.diagnostics).toHaveLength(0);
+    }, 30000);
+
     it("runTests_PureFunctions_PassingCode", async () => {
       const code = `
 public class Exercise

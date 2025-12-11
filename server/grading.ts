@@ -111,7 +111,7 @@ export async function startRunner(): Promise<void> {
 }
 
 // Send code to the runner and get result
-async function runWithRunner(code: string, timeoutMs: number = 30000): Promise<RunnerResponse> {
+async function runWithRunner(code: string, timeoutMs: number = 30000, compileOnly: boolean = false): Promise<RunnerResponse> {
   if (!runnerProcess || !runnerReady) {
     await startRunner();
   }
@@ -119,7 +119,7 @@ async function runWithRunner(code: string, timeoutMs: number = 30000): Promise<R
   return new Promise((resolve, reject) => {
     const id = ++requestId;
 
-    const request = JSON.stringify({ Code: code, TimeoutMs: timeoutMs });
+    const request = JSON.stringify({ Code: code, TimeoutMs: timeoutMs, CompileOnly: compileOnly });
 
     pendingRequests.set(id, { resolve, reject });
 
@@ -371,8 +371,8 @@ export async function executeCode(code: string): Promise<{ success: boolean; out
 // Get diagnostics by compiling the code (without running)
 export async function getDiagnostics(code: string): Promise<{ diagnostics: Diagnostic[] }> {
   try {
-    // Use the runner but we only care about compilation errors
-    const response = await runWithRunner(code, 20000);
+    // Use compile-only mode - no code execution, just compilation checking
+    const response = await runWithRunner(code, 20000, true);
 
     if (response.Success) {
       return { diagnostics: [] };
