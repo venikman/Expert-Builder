@@ -125,7 +125,7 @@ For class-based code, the runner appends a call to invoke `Main()`:
 - Significant cost for maintaining warm containers
 - Overkill for a learning platform
 
-### 3. .NET 10 `dotnet run app.cs`
+### 3. `dotnet run app.cs` (single-file execution)
 
 **Pros**: Official solution, simple
 

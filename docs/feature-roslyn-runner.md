@@ -257,5 +257,5 @@ User clicks "Run"
 
 1. **Runner pool** - Multiple runner instances for concurrent requests
 2. **NuGet support** - Allow specific packages in user code
-3. **.NET 10 migration** - Use `dotnet run app.cs` when stable
+3. **Single-file execution** - Evaluate `dotnet run app.cs` if performance improves
 4. **Execution caching** - Cache compiled scripts for repeated runs
