@@ -82,7 +82,7 @@ An auto-graded learning platform for modern C# with a focus on functional progra
 ├── client/               # React frontend
 │   └── src/
 │       ├── components/   # React components
-│       │   ├── code-editor.tsx
+│       │   ├── uuuu-editor.tsx
 │       │   ├── lesson-page.tsx
 │       │   └── output-panel.tsx
 │       └── lib/

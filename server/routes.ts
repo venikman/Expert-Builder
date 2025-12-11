@@ -1,104 +1,97 @@
-import type { Express } from "express";
-import type { Server } from "http";
+import type { Hono } from "hono";
 import { storage } from "./storage";
 import { executeRequestSchema, submitRequestSchema } from "@shared/schema";
 import { executeCode, getDiagnostics, runTests } from "./grading";
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
-  
-  app.get("/api/lessons", async (_req, res) => {
+export function registerRoutes(app: Hono): void {
+  app.get("/api/lessons", async (c) => {
     try {
       const lessons = await storage.getLessons();
       const safeLessons = lessons.map(({ referenceSolution, testCode, ...rest }) => rest);
-      res.json(safeLessons);
+      return c.json(safeLessons);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch lessons" });
+      return c.json({ error: "Failed to fetch lessons" }, 500);
     }
   });
 
-  app.get("/api/lessons/:id", async (req, res) => {
+  app.get("/api/lessons/:id", async (c) => {
     try {
-      const lesson = await storage.getLesson(req.params.id);
+      const lesson = await storage.getLesson(c.req.param("id"));
       if (!lesson) {
-        return res.status(404).json({ error: "Lesson not found" });
+        return c.json({ error: "Lesson not found" }, 404);
       }
       const { referenceSolution, testCode, ...safeLesson } = lesson;
-      res.json(safeLesson);
+      return c.json(safeLesson);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch lesson" });
+      return c.json({ error: "Failed to fetch lesson" }, 500);
     }
   });
 
-  app.post("/api/execute", async (req, res) => {
+  app.post("/api/execute", async (c) => {
     try {
-      const parsed = executeRequestSchema.safeParse(req.body);
+      const body = await c.req.json();
+      const parsed = executeRequestSchema.safeParse(body);
       if (!parsed.success) {
-        return res.status(400).json({ error: "Invalid request", details: parsed.error.errors });
+        return c.json({ error: "Invalid request", details: parsed.error.errors }, 400);
       }
 
       const { code } = parsed.data;
       const result = await executeCode(code);
-      res.json(result);
+      return c.json(result);
     } catch (error) {
-      res.status(500).json({
+      return c.json({
         success: false,
         output: "",
         error: error instanceof Error ? error.message : "Execution failed"
-      });
+      }, 500);
     }
   });
 
-  // Diagnostics endpoint for LSP-like functionality
-  app.post("/api/diagnostics", async (req, res) => {
+  app.post("/api/diagnostics", async (c) => {
     try {
-      const parsed = executeRequestSchema.safeParse(req.body);
+      const body = await c.req.json();
+      const parsed = executeRequestSchema.safeParse(body);
       if (!parsed.success) {
-        return res.status(400).json({ error: "Invalid request", details: parsed.error.errors });
+        return c.json({ error: "Invalid request", details: parsed.error.errors }, 400);
       }
 
       const { code } = parsed.data;
       const diagnostics = await getDiagnostics(code);
-      res.json(diagnostics);
+      return c.json(diagnostics);
     } catch (error) {
-      res.status(500).json({
+      return c.json({
         diagnostics: [],
         error: error instanceof Error ? error.message : "Diagnostics failed"
-      });
+      }, 500);
     }
   });
 
-  app.post("/api/submit", async (req, res) => {
+  app.post("/api/submit", async (c) => {
     try {
-      const parsed = submitRequestSchema.safeParse(req.body);
+      const body = await c.req.json();
+      const parsed = submitRequestSchema.safeParse(body);
       if (!parsed.success) {
-        return res.status(400).json({ error: "Invalid request", details: parsed.error.errors });
+        return c.json({ error: "Invalid request", details: parsed.error.errors }, 400);
       }
 
       const { code, lessonId } = parsed.data;
       const lesson = await storage.getLesson(lessonId);
 
       if (!lesson) {
-        return res.status(404).json({ error: "Lesson not found" });
+        return c.json({ error: "Lesson not found" }, 404);
       }
 
-      const result = await runTests(code, lesson.id, lesson.title, lesson.testCode, lesson.hints as Record<string, string>);
+      const result = await runTests(code, lesson.id, lesson.title, lesson.testCode, lesson.hints);
 
-      await storage.createSubmission(lessonId, code, result);
-
-      res.json(result);
+      return c.json(result);
     } catch (error) {
-      res.status(500).json({
+      return c.json({
         success: false,
         totalTests: 0,
         passedTests: 0,
         results: [],
         hint: error instanceof Error ? error.message : "Grading failed"
-      });
+      }, 500);
     }
   });
-
-  return httpServer;
 }

@@ -4,3 +4,7 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# .NET build artifacts
+roslyn-runner/bin/
+roslyn-runner/obj/

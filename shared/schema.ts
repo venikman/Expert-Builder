@@ -1,57 +1,17 @@
-import { relations } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, serial, integer } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const lessons = pgTable("lessons", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  title: text("title").notNull(),
-  conceptTags: text("concept_tags").array().notNull().default([]),
-  description: text("description").notNull(),
-  skeleton: text("skeleton").notNull(),
-  referenceSolution: text("reference_solution").notNull(),
-  testCode: text("test_code").notNull(),
-  hints: jsonb("hints").notNull().default({}),
-  order: integer("order").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertLessonSchema = createInsertSchema(lessons).omit({
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertLesson = z.infer<typeof insertLessonSchema>;
-export type Lesson = typeof lessons.$inferSelect;
-
-export const submissions = pgTable("submissions", {
-  id: serial("id").primaryKey(),
-  lessonId: varchar("lesson_id", { length: 255 }).notNull().references(() => lessons.id, { onDelete: "cascade" }),
-  code: text("code").notNull(),
-  result: jsonb("result").notNull(),
-  submittedAt: timestamp("submitted_at").notNull().defaultNow(),
-});
-
-export const insertSubmissionSchema = createInsertSchema(submissions).omit({
-  id: true,
-  submittedAt: true,
-});
-
-export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
-export type SubmissionRow = typeof submissions.$inferSelect;
-
-
-export const lessonsRelations = relations(lessons, ({ many }) => ({
-  submissions: many(submissions),
-}));
-
-export const submissionsRelations = relations(submissions, ({ one }) => ({
-  lesson: one(lessons, {
-    fields: [submissions.lessonId],
-    references: [lessons.id],
-  }),
-}));
+// Lesson type (stored in codebase)
+export interface Lesson {
+  id: string;
+  title: string;
+  conceptTags: string[];
+  description: string;
+  skeleton: string;
+  referenceSolution: string;
+  testCode: string;
+  hints: Record<string, string>;
+  order: number;
+}
 
 export const testResultSchema = z.object({
   name: z.string(),
