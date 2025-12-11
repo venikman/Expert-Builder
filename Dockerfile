@@ -1,36 +1,35 @@
 # Multi-stage build for Expert Builder
-# Stage 1: Build
-FROM node:20-slim AS builder
+# Stage 1: Build with Bun
+FROM oven/bun:1.1 AS builder
 
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json bun.lock ./
 
 # Install all dependencies (including dev)
-RUN npm install --legacy-peer-deps
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN bun run build
 
-# Stage 2: Production
+# Stage 2: Production with .NET SDK and Bun
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS production
 
-# Install Node.js 20
-RUN apt-get update && apt-get install -y curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+# Install Bun
+RUN apt-get update && apt-get install -y curl unzip \
+    && curl -fsSL https://bun.sh/install | bash \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Add Bun to PATH
+ENV BUN_INSTALL="/root/.bun"
+ENV PATH="$BUN_INSTALL/bin:$PATH"
 
-# Copy package files and install production dependencies only
-COPY package*.json ./
-RUN npm install --omit=dev --legacy-peer-deps
+WORKDIR /app
 
 # Copy built artifacts from builder stage
 COPY --from=builder /app/dist ./dist
@@ -50,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/api/lessons || exit 1
 
 # Start the application
-CMD ["node", "dist/index.mjs"]
+CMD ["bun", "dist/index.js"]
