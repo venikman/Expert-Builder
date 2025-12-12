@@ -25,11 +25,22 @@ An auto-graded learning platform for modern C# with a focus on functional progra
 
 ## Tech Stack
 
-- **Frontend**: React 18, TypeScript, TailwindCSS
+- **Frontend**: React 19.2 (client-only SPA), TypeScript, TailwindCSS v4, Rsbuild
 - **Code Editor**: Monaco Editor with custom C# completions
 - **Backend**: Hono (TypeScript)
 - **Runtime**: Bun + .NET 9 (Roslyn Scripting API) for C# code execution
 - **Testing**: Bun test
+
+## Modern React 19 Notes
+
+This app is currently **client-only** (no React Server Components). The recommended React 19 patterns we follow here are:
+
+- **Async-first UI**: Prefer Suspense + TanStack Query’s suspense helpers for data loading.
+- **Mutations as Actions**: Use async Actions (`useActionState`, optional `<form action>`) for pending/error sequencing.
+- **Effect hygiene**: Use `useEffectEvent` to keep subscriptions/listeners stable.
+- **Performance**: Rely on React Compiler where supported by the bundler; otherwise memoize only when profiling shows it helps.
+
+If we later adopt an RSC-capable framework, pin `react-server-dom-*` packages to patched React 19.x versions to avoid known RSC CVEs.
 
 ## Prerequisites
 
