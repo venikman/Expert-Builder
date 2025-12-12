@@ -1,0 +1,3 @@
+[test]
+preload = ["./client/src/test/preload.ts"]
+
