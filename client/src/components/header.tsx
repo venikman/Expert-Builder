@@ -1,8 +1,17 @@
-import { Code2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Code2, ChevronLeft, ChevronRight, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { readLessonProgress } from "@/lib/progress";
 import type { Lesson } from "@shared/schema";
@@ -14,6 +23,7 @@ interface HeaderProps {
 }
 
 export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderProps) {
+  const [isProgressOpen, setIsProgressOpen] = useState(false);
   const currentLesson = lessons[currentLessonIndex];
   const canGoPrev = currentLessonIndex > 0;
   const canGoNext = currentLessonIndex < lessons.length - 1;
@@ -77,17 +87,72 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="hidden sm:flex items-center gap-3 mr-1">
-          <div className="flex flex-col items-end leading-none">
-            <span className="text-[11px] text-muted-foreground">Progress</span>
-            <span className="text-xs font-mono text-foreground">
-              {completedCount}/{lessons.length}
-            </span>
-          </div>
-          <div className="w-20">
-            <Progress value={percentComplete} className="h-2" />
-          </div>
-        </div>
+        <Dialog open={isProgressOpen} onOpenChange={setIsProgressOpen}>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              className="hidden sm:flex items-center gap-3 mr-1 rounded-md px-2 py-1 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              aria-label="Open lesson progress"
+            >
+              <div className="flex flex-col items-end leading-none">
+                <span className="text-[11px] text-muted-foreground">Progress</span>
+                <span className="text-xs font-mono text-foreground">
+                  {completedCount}/{lessons.length}
+                </span>
+              </div>
+              <div className="w-20">
+                <Progress value={percentComplete} className="h-2" />
+              </div>
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Lesson Progress</DialogTitle>
+              <DialogDescription>
+                Completed {completedCount} of {lessons.length} lessons
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              {lessons.map((lesson, index) => {
+                const completed = progress[lesson.id]?.completed;
+                return (
+                  <button
+                    key={lesson.id}
+                    type="button"
+                    onClick={() => {
+                      onLessonChange(index);
+                      setIsProgressOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-3 rounded-md border p-3 text-left hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {completed ? (
+                        <CheckCircle2 className="h-4 w-4 text-chart-5 shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {index + 1}. {lesson.title}
+                        </div>
+                        {lesson.conceptTags.length > 0 && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {lesson.conceptTags.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {completed && (
+                      <Badge variant="secondary" className="font-mono text-[11px]">
+                        Done
+                      </Badge>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
         <ThemeToggle />
       </div>
     </header>
