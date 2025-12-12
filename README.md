@@ -142,6 +142,24 @@ Each lesson includes:
 - Hints are provided inline in grading logic
 - Diagnostics come from Roslyn compiler
 
+## Codex Cloud (recommended)
+
+- Setup script (Manual):  
+  ```
+  cd /workspace/Expert-Builder
+  chmod +x scripts/setup-codex-cloud.sh
+  ./scripts/setup-codex-cloud.sh
+  ```
+- Maintenance script (runs before each task):  
+  ```
+  cd /workspace/Expert-Builder
+  chmod +x scripts/maintenance-codex-cloud.sh
+  ./scripts/maintenance-codex-cloud.sh
+  ```
+- Container caching: On.  
+- Optional env var to use the prebuilt runner:  
+  `ROSLYN_RUNNER_PATH=/workspace/Expert-Builder/roslyn-runner/bin/Release/net9.0/roslyn-runner`
+
 ## License
 
 MIT
