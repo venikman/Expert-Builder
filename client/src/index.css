@@ -14,7 +14,7 @@
   /* Font Families */
   --font-sans: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: "JetBrains Mono", Menlo, Monaco, "Courier New", monospace;
+  --font-mono: "Monaspace Argon", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Animations */
   --animate-accordion-down: accordion-down 0.2s ease-out;
@@ -173,6 +173,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+}
+
+code,
+pre,
+.font-mono {
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0, "liga" 0, "clig" 0;
 }
 
 /* ============================================

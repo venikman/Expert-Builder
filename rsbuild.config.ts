@@ -37,7 +37,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:5000",
+      "/api": "http://localhost:5050",
+    },
+    publicDir: {
+      name: "./client/public",
+      copyOnBuild: true,
     },
   },
   dev: {
