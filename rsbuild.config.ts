@@ -1,8 +1,20 @@
 import { defineConfig } from "@rsbuild/core";
 import { pluginReact } from "@rsbuild/plugin-react";
+import { pluginBabel } from "@rsbuild/plugin-babel";
 
 export default defineConfig({
-  plugins: [pluginReact()],
+  plugins: [
+    pluginReact(),
+    // React Compiler (stable in React 19.2) runs via Babel transform.
+    // Default compilationMode is "infer"; opt-out per file with "use no memo" if needed.
+    pluginBabel({
+      include: /\.(?:jsx|tsx)$/,
+      babelLoaderOptions(options) {
+        options.plugins = options.plugins ?? [];
+        options.plugins.unshift("babel-plugin-react-compiler");
+      },
+    }),
+  ],
   source: {
     entry: {
       index: "./client/src/main.tsx",
