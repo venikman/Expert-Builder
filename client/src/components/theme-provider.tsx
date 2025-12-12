@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useEffectEvent, useState } from "react";
 
 type Theme = "dark" | "light" | "system";
 
@@ -42,21 +42,22 @@ export function ThemeProvider({
     setResolvedTheme(effectiveTheme);
   }, [theme]);
 
+  const onSystemThemeChange = useEffectEvent((matches: boolean) => {
+    if (theme !== "system") return;
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
+    const effectiveTheme = matches ? "dark" : "light";
+    root.classList.add(effectiveTheme);
+    setResolvedTheme(effectiveTheme);
+  });
+
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => {
-      if (theme === "system") {
-        const root = window.document.documentElement;
-        root.classList.remove("light", "dark");
-        const effectiveTheme = mediaQuery.matches ? "dark" : "light";
-        root.classList.add(effectiveTheme);
-        setResolvedTheme(effectiveTheme);
-      }
-    };
+    const handleChange = () => onSystemThemeChange(mediaQuery.matches);
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [theme]);
+  }, []);
 
   const value = {
     theme,
