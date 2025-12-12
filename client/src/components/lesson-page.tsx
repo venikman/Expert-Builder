@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, startTransition, useActionState } from "react";
+import { useState, useEffect, useRef, startTransition, useActionState } from "react";
 import { ChevronDown, ChevronUp, Terminal, Clock } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, type ImperativePanelHandle } from "@/components/ui/resizable";
 import { LessonContent } from "@/components/lesson-content";
@@ -42,7 +42,7 @@ export function LessonPage({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const toggleOutputPanel = useCallback(() => {
+  const toggleOutputPanel = () => {
     if (isOutputCollapsed) {
       outputPanelRef.current?.expand();
       setIsOutputCollapsed(false);
@@ -50,7 +50,7 @@ export function LessonPage({
       outputPanelRef.current?.collapse();
       setIsOutputCollapsed(true);
     }
-  }, [isOutputCollapsed]);
+  };
 
   // Load code from localStorage or skeleton, and start timer
   useEffect(() => {
@@ -96,16 +96,16 @@ export function LessonPage({
     }
   }, [code, lesson?.id]);
 
-  const handleDiagnosticClick = useCallback((diagnostic: Diagnostic) => {
+  const handleDiagnosticClick = (diagnostic: Diagnostic) => {
     codeEditorRef.current?.goToLine(diagnostic.line, diagnostic.column);
-  }, []);
+  };
 
-  const addConsoleLine = useCallback((type: ConsoleLine["type"], content: string) => {
+  const addConsoleLine = (type: ConsoleLine["type"], content: string) => {
     setConsoleLines((prev) => [
       ...prev,
       { type, content, timestamp: Date.now() },
     ]);
-  }, []);
+  };
 
   const [_runState, runAction, isRunning] = useActionState(
     async (prevState: null) => {
@@ -144,11 +144,11 @@ export function LessonPage({
     null
   );
 
-  const handleRun = useCallback(() => {
+  const handleRun = () => {
     startTransition(() => {
       runAction();
     });
-  }, [runAction]);
+  };
 
   const [_submitState, submitAction, isSubmitting] = useActionState(
     async (prevState: null) => {
@@ -194,15 +194,15 @@ export function LessonPage({
     null
   );
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     startTransition(() => {
       submitAction();
     });
-  }, [submitAction]);
+  };
 
-  const handleClearConsole = useCallback(() => {
+  const handleClearConsole = () => {
     setConsoleLines([]);
-  }, []);
+  };
 
   if (isLoadingLesson || !lesson) {
     return (

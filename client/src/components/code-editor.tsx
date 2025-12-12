@@ -254,35 +254,35 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
     };
   }, [vimEnabled, isEditorReady]);
 
-  const toggleVimMode = useCallback(() => {
+  const toggleVimMode = () => {
     setVimEnabled((prev) => !prev);
-  }, []);
+  };
 
   // Font size handlers
-  const increaseFontSize = useCallback(() => {
+  const increaseFontSize = () => {
     setFontSize((prev) => {
       const newSize = Math.min(prev + 2, MAX_FONT_SIZE);
       localStorage.setItem("editor-font-size", String(newSize));
       editorRef.current?.updateOptions({ fontSize: newSize });
       return newSize;
     });
-  }, []);
+  };
 
-  const decreaseFontSize = useCallback(() => {
+  const decreaseFontSize = () => {
     setFontSize((prev) => {
       const newSize = Math.max(prev - 2, MIN_FONT_SIZE);
       localStorage.setItem("editor-font-size", String(newSize));
       editorRef.current?.updateOptions({ fontSize: newSize });
       return newSize;
     });
-  }, []);
+  };
 
   // Reset code to skeleton
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     if (skeleton && code !== skeleton) {
       onCodeChange(skeleton);
     }
-  }, [skeleton, code, onCodeChange]);
+  };
 
   const hasChanges = skeleton && code !== skeleton;
 
