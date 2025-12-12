@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun run --hot server/index.ts",
     "dev:client": "rsbuild dev",
+    "dev:all": "bun run dev & bun run dev:client",
     "build": "bun run script/build.ts",
     "build:client": "rsbuild build",
     "start": "NODE_ENV=production bun dist/index.js",
