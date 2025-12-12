@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTheme } from "@/components/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { registerCSharpCompletions } from "@/lib/csharp-completions";
 import { apiRequest } from "@/lib/queryClient";
@@ -365,7 +364,6 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
         </div>
         <div className="flex items-center gap-2">
           <KeyboardShortcutsModal />
-          <ThemeToggle />
           <span className="text-xs text-muted-foreground hidden sm:block">
             Ctrl+Enter: Run | Ctrl+Shift+Enter: Submit
           </span>
