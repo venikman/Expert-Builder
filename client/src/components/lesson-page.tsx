@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, startTransition, useActionState } from "react";
 import { ChevronDown, ChevronUp, Terminal, Clock } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, type ImperativePanelHandle } from "@/components/ui/resizable";
 import { LessonContent } from "@/components/lesson-content";
@@ -24,8 +24,6 @@ export function LessonPage({
   const [consoleLines, setConsoleLines] = useState<ConsoleLine[]>([]);
   const [testResult, setTestResult] = useState<SubmissionResult | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [outputTab, setOutputTab] = useState<"console" | "tests" | "problems">("problems");
   const [mobileTab, setMobileTab] = useState<"lesson" | "editor">("lesson");
   const [isOutputCollapsed, setIsOutputCollapsed] = useState(false);
@@ -109,82 +107,98 @@ export function LessonPage({
     ]);
   }, []);
 
-  const handleRun = useCallback(async () => {
-    if (!lesson) return;
+  const [_runState, runAction, isRunning] = useActionState(
+    async (prevState: null) => {
+      if (!lesson) return prevState;
 
-    setIsRunning(true);
-    setOutputTab("console");
-    addConsoleLine("info", "Compiling and running...");
+      setOutputTab("console");
+      addConsoleLine("info", "Compiling and running...");
 
-    try {
-      const result = await apiRequest<ExecuteResult>("POST", "/api/execute", {
-        code,
-        lessonId: lesson.id,
-      });
+      try {
+        const result = await apiRequest<ExecuteResult>("POST", "/api/execute", {
+          code,
+          lessonId: lesson.id,
+        });
 
-      if (result.success) {
-        if (result.output) {
-          result.output.split("\n").forEach((line: string) => {
-            if (line.trim()) {
-              addConsoleLine("stdout", line);
-            }
+        if (result.success) {
+          if (result.output) {
+            result.output.split("\n").forEach((line: string) => {
+              if (line.trim()) {
+                addConsoleLine("stdout", line);
+              }
+            });
+          }
+          addConsoleLine("info", `Execution completed in ${result.executionTime || 0}ms`);
+        } else {
+          if (result.error) {
+            addConsoleLine("stderr", result.error);
+          }
+          addConsoleLine("info", "Execution failed");
+        }
+      } catch (error) {
+        addConsoleLine("stderr", error instanceof Error ? error.message : "Unknown error");
+      }
+
+      return prevState;
+    },
+    null
+  );
+
+  const handleRun = useCallback(() => {
+    startTransition(() => {
+      runAction();
+    });
+  }, [runAction]);
+
+  const [_submitState, submitAction, isSubmitting] = useActionState(
+    async (prevState: null) => {
+      if (!lesson) return prevState;
+
+      addConsoleLine("info", "Submitting for grading...");
+
+      try {
+        const result = await apiRequest<SubmissionResult>("POST", "/api/submit", {
+          code,
+          lessonId: lesson.id,
+        });
+
+        setTestResult(result);
+        setOutputTab("tests");
+
+        // Invalidate progress cache to update UI
+        queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
+
+        if (result.success) {
+          toast({
+            title: "All tests passed!",
+            description: "Great job! You can move on to the next lesson.",
+          });
+        } else {
+          toast({
+            title: "Some tests failed",
+            description: `${result.passedTests}/${result.totalTests} tests passed. Check the results for details.`,
+            variant: "destructive",
           });
         }
-        addConsoleLine("info", `Execution completed in ${result.executionTime || 0}ms`);
-      } else {
-        if (result.error) {
-          addConsoleLine("stderr", result.error);
-        }
-        addConsoleLine("info", "Execution failed");
-      }
-    } catch (error) {
-      addConsoleLine("stderr", error instanceof Error ? error.message : "Unknown error");
-    } finally {
-      setIsRunning(false);
-    }
-  }, [code, lesson, addConsoleLine]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!lesson) return;
-
-    setIsSubmitting(true);
-    addConsoleLine("info", "Submitting for grading...");
-
-    try {
-      const result = await apiRequest<SubmissionResult>("POST", "/api/submit", {
-        code,
-        lessonId: lesson.id,
-      });
-
-      setTestResult(result);
-      setOutputTab("tests");
-
-      // Invalidate progress cache to update UI
-      queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
-
-      if (result.success) {
+      } catch (error) {
+        addConsoleLine("stderr", error instanceof Error ? error.message : "Submission failed");
         toast({
-          title: "All tests passed!",
-          description: "Great job! You can move on to the next lesson.",
-        });
-      } else {
-        toast({
-          title: "Some tests failed",
-          description: `${result.passedTests}/${result.totalTests} tests passed. Check the results for details.`,
+          title: "Submission failed",
+          description: "There was an error grading your code. Please try again.",
           variant: "destructive",
         });
       }
-    } catch (error) {
-      addConsoleLine("stderr", error instanceof Error ? error.message : "Submission failed");
-      toast({
-        title: "Submission failed",
-        description: "There was an error grading your code. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [code, lesson, addConsoleLine, toast]);
+
+      return prevState;
+    },
+    null
+  );
+
+  const handleSubmit = useCallback(() => {
+    startTransition(() => {
+      submitAction();
+    });
+  }, [submitAction]);
 
   const handleClearConsole = useCallback(() => {
     setConsoleLines([]);
