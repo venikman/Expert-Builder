@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { markLessonCompleted } from "@/lib/progress";
 import type { Lesson, ConsoleLine, SubmissionResult, ExecuteResult, Diagnostic } from "@shared/schema";
 
 interface LessonPageProps {
@@ -165,10 +166,9 @@ export function LessonPage({
         setTestResult(result);
         setOutputTab("tests");
 
-        // Invalidate progress cache to update UI
-        queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
-
         if (result.success) {
+          const updatedProgress = markLessonCompleted(lesson.id);
+          queryClient.setQueryData(["lesson-progress"], updatedProgress);
           toast({
             title: "All tests passed!",
             description: "Great job! You can move on to the next lesson.",

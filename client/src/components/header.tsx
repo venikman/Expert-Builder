@@ -2,6 +2,9 @@ import { Code2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Progress } from "@/components/ui/progress";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { readLessonProgress } from "@/lib/progress";
 import type { Lesson } from "@shared/schema";
 
 interface HeaderProps {
@@ -14,6 +17,17 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
   const currentLesson = lessons[currentLessonIndex];
   const canGoPrev = currentLessonIndex > 0;
   const canGoNext = currentLessonIndex < lessons.length - 1;
+
+  const { data: progress = {} } = useSuspenseQuery({
+    queryKey: ["lesson-progress"],
+    queryFn: () => Promise.resolve(readLessonProgress()),
+    staleTime: Infinity,
+  });
+
+  const completedCount = lessons.filter((l) => progress[l.id]?.completed).length;
+  const percentComplete = lessons.length
+    ? Math.round((completedCount / lessons.length) * 100)
+    : 0;
 
   return (
     <header className="h-16 border-b bg-background flex items-center justify-between px-4 gap-4 sticky top-0 z-50">
@@ -63,6 +77,17 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
       </div>
 
       <div className="flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-3 mr-1">
+          <div className="flex flex-col items-end leading-none">
+            <span className="text-[11px] text-muted-foreground">Progress</span>
+            <span className="text-xs font-mono text-foreground">
+              {completedCount}/{lessons.length}
+            </span>
+          </div>
+          <div className="w-20">
+            <Progress value={percentComplete} className="h-2" />
+          </div>
+        </div>
         <ThemeToggle />
       </div>
     </header>
