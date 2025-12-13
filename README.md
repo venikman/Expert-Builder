@@ -71,16 +71,19 @@ The repo includes a `global.json` that pins the SDK version to ensure CI/CLI pic
 
 2. **Start development server**:
    ```bash
-   bun run dev
+   bun run dev:all
    ```
 
-   The app will be available at http://localhost:5000
+   Frontend: http://localhost:5173  
+   API: http://localhost:5050
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `bun run dev` | Start development server with hot reload |
+| `bun run dev` | Start API server with hot reload |
+| `bun run dev:client` | Start frontend dev server |
+| `bun run dev:all` | Start API + frontend |
 | `bun run build` | Build for production |
 | `bun run start` | Run production build |
 | `bun run check` | Type-check TypeScript |

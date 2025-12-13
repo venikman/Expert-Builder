@@ -9,6 +9,10 @@ export interface Lesson {
   skeleton: string;
   referenceSolution: string;
   testCode: string;
+  /**
+   * Safe-to-expose names for UI checklists. Derived from `testCode` server-side.
+   */
+  testNames?: string[];
   hints: Record<string, string>;
   order: number;
 }

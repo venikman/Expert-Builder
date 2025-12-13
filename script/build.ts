@@ -24,6 +24,12 @@ async function buildAll() {
       html: {
         template: "./client/index.html",
       },
+      server: {
+        publicDir: {
+          name: "./client/public",
+          copyOnBuild: true,
+        },
+      },
       output: {
         distPath: {
           root: "dist/public",

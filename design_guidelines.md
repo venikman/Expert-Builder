@@ -18,7 +18,7 @@
 
 **Font Families:**
 - **Interface Text:** Inter (Google Fonts) - clean, highly legible for UI
-- **Code:** JetBrains Mono (Google Fonts) - optimized for code readability
+- **Code:** Monaspace Argon (self-hosted) - readable mono with optional FP ligatures (off by default)
 - **Documentation:** Inter for consistency
 
 **Type Scale:**
