@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "PORT=5050 bun run --hot server/index.ts",
+    "dev": "bun run --hot server/index.ts",
     "dev:client": "rsbuild dev",
     "dev:all": "bun run dev & bun run dev:client",
     "build": "bun run script/build.ts",

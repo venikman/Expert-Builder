@@ -15,12 +15,15 @@ let compareStringsNoIO (a:string) (b:string) =
       Result (a = b) ]
 
 let interpret (commands:Command list) =
-    let mutable r = None
-    for c in commands do
-        match c with
+    commands
+    |> List.iter (function
         | Log msg -> printfn "LOG %s" msg
-        | Result b -> r <- Some b
-    r
+        | Result _ -> ())
+
+    commands
+    |> List.tryPick (function
+        | Result b -> Some b
+        | _ -> None)
 
 let test1 =
     compareStrings (fun _ -> ()) "a" "a"
