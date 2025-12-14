@@ -15,6 +15,14 @@ export default defineConfig({
       },
     }),
   ],
+  tools: {
+    cssLoader: (options) => {
+      options.url = {
+        // Keep absolute URLs (e.g. /fonts/...) as-is so they resolve from `server.publicDir`.
+        filter: (url) => !url.startsWith("/"),
+      };
+    },
+  },
   source: {
     entry: {
       index: "./client/src/main.tsx",

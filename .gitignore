@@ -2,9 +2,11 @@ node_modules
 dist
 .DS_Store
 server/public
-vite.config.ts.*
 *.tar.gz
+playwright-report/
+test-results/
 
 # .NET build artifacts
 roslyn-runner/bin/
 roslyn-runner/obj/
+.fake

@@ -161,14 +161,14 @@ Each lesson includes:
 - Setup script (Manual):  
   ```
   cd /workspace/Expert-Builder
-  chmod +x scripts/setup-codex-cloud.sh
-  ./scripts/setup-codex-cloud.sh
+  chmod +x tools/codex-cloud/setup.sh
+  ./tools/codex-cloud/setup.sh
   ```
 - Maintenance script (runs before each task):  
   ```
   cd /workspace/Expert-Builder
-  chmod +x scripts/maintenance-codex-cloud.sh
-  ./scripts/maintenance-codex-cloud.sh
+  chmod +x tools/codex-cloud/maintenance.sh
+  ./tools/codex-cloud/maintenance.sh
   ```
 - Container caching: On.  
 - Optional env var to use the prebuilt runner:  
