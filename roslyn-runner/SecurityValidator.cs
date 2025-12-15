@@ -45,7 +45,7 @@ static class SecurityValidator
 
     // Blocked patterns for reflection/assembly loading
     private static readonly string[] ReflectionPatterns = [
-        @"\bAssembly\.Load",
+        @"\bAssembly\.Load\b",
         @"\bAssembly\.LoadFrom\b",
         @"\bAssembly\.LoadFile\b",
         @"\bActivator\.CreateInstance\b",
