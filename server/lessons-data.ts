@@ -526,4 +526,1764 @@ public class Exercise
       "Product([1,0,5]) should return 0": "Any list containing 0 will have a product of 0",
     },
   },
+
+  // ============================================
+  // MODULE 2: DELEGATE FOUNDATIONS
+  // ============================================
+
+  {
+    id: "delegate-types",
+    title: "Delegates as Function Values",
+    conceptTags: ["delegates", "function values", "method groups", "signatures"],
+    order: 6,
+    description: `## Delegates: The "Function Value" Mental Model
+
+Delegates let you treat **behavior as data**. Instead of hard-coding *what* happens, you pass *how* it happens.
+
+### What is a Delegate?
+
+A **delegate type** describes a callable signature: parameter list + return type.
+
+A **delegate instance** is an object you can store, pass around, and invoke.
+
+\`\`\`csharp
+// Declare a delegate TYPE
+delegate int MathOperation(int a, int b);
+
+// Create delegate INSTANCES
+MathOperation add = (a, b) => a + b;
+MathOperation multiply = (a, b) => a * b;
+
+// Invoke them
+Console.WriteLine(add(3, 4));      // 7
+Console.WriteLine(multiply(3, 4)); // 12
+\`\`\`
+
+### Method Groups
+
+You can assign an existing method directly to a delegate:
+
+\`\`\`csharp
+Action<string> log = Console.WriteLine;
+log("Hello!"); // Calls Console.WriteLine
+\`\`\`
+
+### Important: Return Type Matters!
+
+For method overloads, return type is NOT part of the signature.
+**For delegates, return type IS part of the signature.**
+
+\`Func<int, int>\` and \`Action<int>\` are completely different types!
+
+### Your Task
+
+Create a delegate type \`StringTransform\` that takes a string and returns a string.
+Implement \`ApplyTransform\` that applies any transform to a string.`,
+    skeleton: `using System;
+
+// Define a delegate type for string transformations
+public delegate string StringTransform(string input);
+
+public class Exercise
+{
+    // Apply the given transform to the input string
+    public static string ApplyTransform(string input, StringTransform transform)
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        StringTransform toUpper = s => s.ToUpper();
+        StringTransform addExclaim = s => s + "!";
+
+        Console.WriteLine(ApplyTransform("hello", toUpper));
+        Console.WriteLine(ApplyTransform("wow", addExclaim));
+    }
+}`,
+    referenceSolution: `using System;
+
+public delegate string StringTransform(string input);
+
+public class Exercise
+{
+    public static string ApplyTransform(string input, StringTransform transform)
+    {
+        return transform(input);
+    }
+
+    public static void Main()
+    {
+        StringTransform toUpper = s => s.ToUpper();
+        StringTransform addExclaim = s => s + "!";
+
+        Console.WriteLine(ApplyTransform("hello", toUpper));
+        Console.WriteLine(ApplyTransform("wow", addExclaim));
+    }
+}`,
+    testCode: `[
+  { "name": "ToUpper transform works", "input": "hello", "transform": "toUpper", "expected": "HELLO" },
+  { "name": "AddExclaim transform works", "input": "wow", "transform": "addExclaim", "expected": "wow!" },
+  { "name": "Reverse transform works", "input": "abc", "transform": "reverse", "expected": "cba" },
+  { "name": "Empty string handled", "input": "", "transform": "toUpper", "expected": "" },
+  { "name": "Identity transform works", "input": "test", "transform": "identity", "expected": "test" }
+]`,
+    hints: {
+      "ToUpper transform works": "Simply invoke the transform delegate with the input: transform(input)",
+      "Reverse transform works": "The delegate handles the logic - you just need to call it",
+      "Empty string handled": "Delegates work the same way regardless of input value",
+    },
+  },
+  {
+    id: "action-func-predicate",
+    title: "Action, Func & Predicate",
+    conceptTags: ["Action", "Func", "Predicate", "built-in delegates"],
+    order: 7,
+    description: `## Built-in Delegate Types
+
+C# provides generic delegate types so you don't need to define your own.
+
+### Choosing the Right One
+
+| Delegate | Returns | Use When |
+|----------|---------|----------|
+| \`Action<...>\` | void | Side effects only (logging, saving) |
+| \`Func<..., TResult>\` | TResult | Computing/returning a value |
+| \`Predicate<T>\` | bool | Testing a condition |
+
+### Action (no return value)
+
+\`\`\`csharp
+Action<string> log = msg => Console.WriteLine(msg);
+Action<int, int> printSum = (a, b) => Console.WriteLine(a + b);
+
+log("Hello");        // prints "Hello"
+printSum(3, 4);      // prints "7"
+\`\`\`
+
+### Func (returns a value)
+
+\`\`\`csharp
+Func<int, int> square = x => x * x;
+Func<int, int, int> add = (a, b) => a + b;
+Func<string> getGreeting = () => "Hello!";
+
+Console.WriteLine(square(5));      // 25
+Console.WriteLine(add(3, 4));      // 7
+Console.WriteLine(getGreeting()); // "Hello!"
+\`\`\`
+
+### Predicate (returns bool)
+
+\`\`\`csharp
+Predicate<int> isEven = n => n % 2 == 0;
+Predicate<string> isEmpty = s => string.IsNullOrEmpty(s);
+
+Console.WriteLine(isEven(4));     // True
+Console.WriteLine(isEmpty(""));   // True
+\`\`\`
+
+### Your Task
+
+Implement \`CountMatching\` that counts how many items in a list match a predicate.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    // Count items that match the predicate
+    public static int CountMatching<T>(List<T> items, Predicate<T> predicate)
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var numbers = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+        Predicate<int> isEven = n => n % 2 == 0;
+        Predicate<int> isGreaterThan5 = n => n > 5;
+
+        Console.WriteLine($"Even count: {CountMatching(numbers, isEven)}");
+        Console.WriteLine($"Greater than 5: {CountMatching(numbers, isGreaterThan5)}");
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    public static int CountMatching<T>(List<T> items, Predicate<T> predicate)
+    {
+        int count = 0;
+        foreach (var item in items)
+        {
+            if (predicate(item))
+                count++;
+        }
+        return count;
+    }
+
+    public static void Main()
+    {
+        var numbers = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+        Predicate<int> isEven = n => n % 2 == 0;
+        Predicate<int> isGreaterThan5 = n => n > 5;
+
+        Console.WriteLine($"Even count: {CountMatching(numbers, isEven)}");
+        Console.WriteLine($"Greater than 5: {CountMatching(numbers, isGreaterThan5)}");
+    }
+}`,
+    testCode: `[
+  { "name": "Count even numbers in 1-10", "input": [1,2,3,4,5,6,7,8,9,10], "predicate": "isEven", "expected": 5 },
+  { "name": "Count numbers > 5", "input": [1,2,3,4,5,6,7,8,9,10], "predicate": "greaterThan5", "expected": 5 },
+  { "name": "Count in empty list", "input": [], "predicate": "isEven", "expected": 0 },
+  { "name": "Count all matching", "input": [2,4,6], "predicate": "isEven", "expected": 3 },
+  { "name": "Count none matching", "input": [1,3,5], "predicate": "isEven", "expected": 0 }
+]`,
+    hints: {
+      "Count even numbers in 1-10": "Loop through items and increment a counter when predicate(item) returns true",
+      "Count in empty list": "An empty list should return 0 - the loop simply doesn't execute",
+      "Count none matching": "When no items match, the counter stays at 0",
+    },
+  },
+  {
+    id: "lambdas-closures",
+    title: "Lambdas & Closures",
+    conceptTags: ["lambdas", "closures", "captures", "static lambdas"],
+    order: 8,
+    description: `## Lambda Expressions
+
+Lambdas are a concise way to create anonymous functions.
+
+### Two Forms
+
+**Expression lambda** (single expression):
+\`\`\`csharp
+Func<int, int> square = x => x * x;
+\`\`\`
+
+**Statement lambda** (multiple statements):
+\`\`\`csharp
+Func<int, int> factorial = n => {
+    int result = 1;
+    for (int i = 2; i <= n; i++)
+        result *= i;
+    return result;
+};
+\`\`\`
+
+### Closures: Capturing Outer Variables
+
+When a lambda uses variables from outside its scope, it **captures** them:
+
+\`\`\`csharp
+int multiplier = 3;
+Func<int, int> multiply = x => x * multiplier; // captures 'multiplier'
+
+Console.WriteLine(multiply(5)); // 15
+multiplier = 10;
+Console.WriteLine(multiply(5)); // 50 - uses current value!
+\`\`\`
+
+### The Closure Trap
+
+\`\`\`csharp
+var actions = new List<Action>();
+for (int i = 0; i < 3; i++)
+{
+    actions.Add(() => Console.WriteLine(i)); // Bug! All print 3
+}
+// Fix: capture a copy
+for (int i = 0; i < 3; i++)
+{
+    int copy = i;
+    actions.Add(() => Console.WriteLine(copy)); // Correct: 0, 1, 2
+}
+\`\`\`
+
+### Static Lambdas (C# 9+)
+
+Prevent accidental capture with \`static\`:
+
+\`\`\`csharp
+int x = 5;
+Func<int, int> bad = y => y + x;           // captures x
+Func<int, int> good = static y => y * 2;   // compile error if it captures
+\`\`\`
+
+### Your Task
+
+Implement \`CreateMultiplier\` that returns a function which multiplies by a captured value.`,
+    skeleton: `using System;
+
+public class Exercise
+{
+    // Return a function that multiplies its input by 'factor'
+    public static Func<int, int> CreateMultiplier(int factor)
+    {
+        // Your code here - use a closure to capture 'factor'
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var double_it = CreateMultiplier(2);
+        var triple = CreateMultiplier(3);
+
+        Console.WriteLine($"double(5) = {double_it(5)}");
+        Console.WriteLine($"triple(5) = {triple(5)}");
+        Console.WriteLine($"double(10) = {double_it(10)}");
+    }
+}`,
+    referenceSolution: `using System;
+
+public class Exercise
+{
+    public static Func<int, int> CreateMultiplier(int factor)
+    {
+        return x => x * factor;
+    }
+
+    public static void Main()
+    {
+        var double_it = CreateMultiplier(2);
+        var triple = CreateMultiplier(3);
+
+        Console.WriteLine($"double(5) = {double_it(5)}");
+        Console.WriteLine($"triple(5) = {triple(5)}");
+        Console.WriteLine($"double(10) = {double_it(10)}");
+    }
+}`,
+    testCode: `[
+  { "name": "CreateMultiplier(2)(5) = 10", "factor": 2, "input": 5, "expected": 10 },
+  { "name": "CreateMultiplier(3)(5) = 15", "factor": 3, "input": 5, "expected": 15 },
+  { "name": "CreateMultiplier(0)(100) = 0", "factor": 0, "input": 100, "expected": 0 },
+  { "name": "CreateMultiplier(1)(42) = 42", "factor": 1, "input": 42, "expected": 42 },
+  { "name": "CreateMultiplier(-2)(5) = -10", "factor": -2, "input": 5, "expected": -10 }
+]`,
+    hints: {
+      "CreateMultiplier(2)(5) = 10": "Return a lambda that captures 'factor': x => x * factor",
+      "CreateMultiplier(0)(100) = 0": "The closure captures factor=0, so any input * 0 = 0",
+      "CreateMultiplier(-2)(5) = -10": "Closures work with any value, including negatives",
+    },
+  },
+
+  // ============================================
+  // MODULE 3: HTO PATTERNS
+  // ============================================
+
+  {
+    id: "hto-callback",
+    title: "HTO-1: Callback Pattern",
+    conceptTags: ["callback", "HTO", "Action", "notify"],
+    order: 9,
+    description: `## HTO Pattern: Callback
+
+> **HTO (Higher-Order Technique)**: A design where code **accepts behavior** as a value and/or **returns behavior**.
+
+### The Callback Pattern
+
+**Intent:** Decouple a producer from "what to do next."
+
+**Signature:** Usually \`Action<T>\` (no return) or \`Func<T, TResult>\` (with return).
+
+**Where you see it:** Timers, background work, library hooks, progress reporting.
+
+### Example: Progress Reporter
+
+\`\`\`csharp
+void ProcessItems(List<string> items, Action<int> onProgress)
+{
+    for (int i = 0; i < items.Count; i++)
+    {
+        // Do work...
+        onProgress(i + 1); // Notify progress
+    }
+}
+
+// Usage
+ProcessItems(myItems, count => Console.WriteLine($"Processed {count} items"));
+\`\`\`
+
+### Why Callbacks?
+
+- **Decoupling:** The processor doesn't know how progress is displayed
+- **Testability:** Pass a mock callback that records calls
+- **Flexibility:** Different callers can handle notifications differently
+
+### Pitfalls
+
+- Don't use \`async void\` callbacks (except event handlers)
+- Avoid capturing large objects in frequently-called callbacks
+
+### Your Task
+
+Implement \`ProcessWithProgress\` that processes numbers and reports progress via callback.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    // Process each number (square it) and call onProgress after each
+    // onProgress receives: (index, originalValue, processedValue)
+    public static List<int> ProcessWithProgress(
+        List<int> numbers,
+        Action<int, int, int> onProgress)
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var numbers = new List<int> { 2, 3, 4 };
+        var results = ProcessWithProgress(numbers, (idx, orig, result) =>
+            Console.WriteLine($"[{idx}] {orig} -> {result}"));
+
+        Console.WriteLine($"Results: [{string.Join(", ", results)}]");
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    public static List<int> ProcessWithProgress(
+        List<int> numbers,
+        Action<int, int, int> onProgress)
+    {
+        var results = new List<int>();
+        for (int i = 0; i < numbers.Count; i++)
+        {
+            int squared = numbers[i] * numbers[i];
+            results.Add(squared);
+            onProgress(i, numbers[i], squared);
+        }
+        return results;
+    }
+
+    public static void Main()
+    {
+        var numbers = new List<int> { 2, 3, 4 };
+        var results = ProcessWithProgress(numbers, (idx, orig, result) =>
+            Console.WriteLine($"[{idx}] {orig} -> {result}"));
+
+        Console.WriteLine($"Results: [{string.Join(", ", results)}]");
+    }
+}`,
+    testCode: `[
+  { "name": "Returns squared values", "input": [2,3,4], "expected": [4,9,16] },
+  { "name": "Callback called for each item", "input": [1,2,3], "expectedCallCount": 3 },
+  { "name": "Empty list returns empty", "input": [], "expected": [] },
+  { "name": "Single item works", "input": [5], "expected": [25] },
+  { "name": "Callback receives correct indices", "input": [10,20], "expectedIndices": [0,1] }
+]`,
+    hints: {
+      "Returns squared values": "Loop through numbers, square each one, add to results list",
+      "Callback called for each item": "Call onProgress(i, numbers[i], squared) inside the loop",
+      "Empty list returns empty": "The loop doesn't execute for empty input, returning empty results",
+    },
+  },
+  {
+    id: "hto-strategy",
+    title: "HTO-2: Strategy Pattern",
+    conceptTags: ["strategy", "HTO", "policy", "runtime behavior"],
+    order: 10,
+    description: `## HTO Pattern: Strategy
+
+**Intent:** Inject a policy/algorithm without subclassing.
+
+**Signature:** \`Func<TIn, TOut>\` or \`Func<TIn, bool>\` for decisions.
+
+### The Strategy Pattern with Delegates
+
+Instead of creating interface + multiple classes, pass a function:
+
+\`\`\`csharp
+// Traditional OOP: IDiscountStrategy, PercentDiscount, FixedDiscount...
+// Functional: just pass a Func!
+
+decimal CalculateTotal(decimal subtotal, Func<decimal, decimal> discountStrategy)
+{
+    var discount = discountStrategy(subtotal);
+    return subtotal - discount;
+}
+
+// Usage
+Func<decimal, decimal> tenPercent = amount => amount * 0.10m;
+Func<decimal, decimal> fixedFive = amount => 5m;
+
+var total1 = CalculateTotal(100m, tenPercent); // 90
+var total2 = CalculateTotal(100m, fixedFive);  // 95
+\`\`\`
+
+### Real-World Uses
+
+- **Validation strategies:** \`Func<T, bool>\` to decide if valid
+- **Logging filters:** \`Func<LogEntry, bool>\` to decide what to log
+- **Pricing rules:** \`Func<Order, decimal>\` to calculate prices
+
+### When to Use Strategy
+
+- Behavior varies at runtime
+- Multiple algorithms for the same task
+- You want to avoid a class hierarchy
+
+### Your Task
+
+Implement \`FilterBy\` that filters a list using a strategy function.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    // Filter items using the provided strategy
+    public static List<T> FilterBy<T>(List<T> items, Func<T, bool> strategy)
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var numbers = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+        // Different strategies
+        Func<int, bool> evensOnly = n => n % 2 == 0;
+        Func<int, bool> greaterThan5 = n => n > 5;
+        Func<int, bool> isPrime = n => n > 1 && !Enumerable.Range(2, (int)Math.Sqrt(n)).Any(i => n % i == 0);
+
+        Console.WriteLine($"Evens: [{string.Join(", ", FilterBy(numbers, evensOnly))}]");
+        Console.WriteLine($">5: [{string.Join(", ", FilterBy(numbers, greaterThan5))}]");
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public class Exercise
+{
+    public static List<T> FilterBy<T>(List<T> items, Func<T, bool> strategy)
+    {
+        var result = new List<T>();
+        foreach (var item in items)
+        {
+            if (strategy(item))
+                result.Add(item);
+        }
+        return result;
+    }
+
+    public static void Main()
+    {
+        var numbers = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+        Func<int, bool> evensOnly = n => n % 2 == 0;
+        Func<int, bool> greaterThan5 = n => n > 5;
+
+        Console.WriteLine($"Evens: [{string.Join(", ", FilterBy(numbers, evensOnly))}]");
+        Console.WriteLine($">5: [{string.Join(", ", FilterBy(numbers, greaterThan5))}]");
+    }
+}`,
+    testCode: `[
+  { "name": "Filter evens from 1-10", "input": [1,2,3,4,5,6,7,8,9,10], "strategy": "isEven", "expected": [2,4,6,8,10] },
+  { "name": "Filter > 5 from 1-10", "input": [1,2,3,4,5,6,7,8,9,10], "strategy": "greaterThan5", "expected": [6,7,8,9,10] },
+  { "name": "Filter none matching", "input": [1,3,5], "strategy": "isEven", "expected": [] },
+  { "name": "Filter all matching", "input": [2,4,6], "strategy": "isEven", "expected": [2,4,6] },
+  { "name": "Filter empty list", "input": [], "strategy": "isEven", "expected": [] }
+]`,
+    hints: {
+      "Filter evens from 1-10": "Loop through items, add to result if strategy(item) returns true",
+      "Filter none matching": "When no items match the strategy, return an empty list",
+      "Filter all matching": "When all items match, return all of them",
+    },
+  },
+  {
+    id: "hto-pipeline",
+    title: "HTO-3: Pipeline Pattern",
+    conceptTags: ["pipeline", "middleware", "HTO", "composition", "chain"],
+    order: 11,
+    description: `## HTO Pattern: Pipeline / Middleware
+
+**Intent:** Build a chain where each step can do work before/after "next."
+
+**Signature:** \`Func<TContext, Func<Task>, Task>\` or similar.
+
+### The Pipeline Concept
+
+Each middleware component:
+1. Does work **before** calling next
+2. Calls **next** to continue the chain
+3. Does work **after** next returns
+4. Can **short-circuit** by not calling next
+
+\`\`\`csharp
+// Conceptual middleware
+async Task LoggingMiddleware(Context ctx, Func<Task> next)
+{
+    Console.WriteLine("Before");
+    await next();  // Continue pipeline
+    Console.WriteLine("After");
+}
+\`\`\`
+
+### ASP.NET Core Connection
+
+This is exactly how ASP.NET Core middleware works:
+- \`RequestDelegate\` is \`HttpContext -> Task\`
+- Each middleware wraps the next one
+
+### Building a Simple Pipeline
+
+\`\`\`csharp
+public class Pipeline
+{
+    private readonly List<Func<Action, Action>> _middlewares = new();
+
+    public void Use(Func<Action, Action> middleware)
+        => _middlewares.Add(middleware);
+
+    public Action Build()
+    {
+        Action app = () => { }; // Terminal
+        for (int i = _middlewares.Count - 1; i >= 0; i--)
+            app = _middlewares[i](app);
+        return app;
+    }
+}
+\`\`\`
+
+### Your Task
+
+Implement a pipeline that wraps string processing with "before/after" steps.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    // Build a pipeline: each step wraps the next
+    // Steps are applied in order: first added = outermost wrapper
+    public static Func<string, string> BuildPipeline(
+        List<Func<string, Func<string, string>, string>> steps)
+    {
+        // Your code here
+        // Hint: start from the innermost (identity) and wrap outward
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var steps = new List<Func<string, Func<string, string>, string>>
+        {
+            (input, next) => "[" + next(input) + "]",  // Wrap in brackets
+            (input, next) => next(input.ToUpper()),    // Uppercase first
+        };
+
+        var pipeline = BuildPipeline(steps);
+        Console.WriteLine(pipeline("hello")); // Expected: [HELLO]
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    public static Func<string, string> BuildPipeline(
+        List<Func<string, Func<string, string>, string>> steps)
+    {
+        // Start with identity function (terminal)
+        Func<string, string> pipeline = s => s;
+
+        // Wrap from last to first (so first step is outermost)
+        for (int i = steps.Count - 1; i >= 0; i--)
+        {
+            var step = steps[i];
+            var next = pipeline;
+            pipeline = input => step(input, next);
+        }
+
+        return pipeline;
+    }
+
+    public static void Main()
+    {
+        var steps = new List<Func<string, Func<string, string>, string>>
+        {
+            (input, next) => "[" + next(input) + "]",
+            (input, next) => next(input.ToUpper()),
+        };
+
+        var pipeline = BuildPipeline(steps);
+        Console.WriteLine(pipeline("hello"));
+    }
+}`,
+    testCode: `[
+  { "name": "Brackets + uppercase", "input": "hello", "steps": ["brackets", "uppercase"], "expected": "[HELLO]" },
+  { "name": "Empty pipeline returns input", "input": "test", "steps": [], "expected": "test" },
+  { "name": "Single step works", "input": "hi", "steps": ["uppercase"], "expected": "HI" },
+  { "name": "Order matters", "input": "abc", "steps": ["addX", "uppercase"], "expected": "ABCX" },
+  { "name": "Three steps", "input": "a", "steps": ["brackets", "uppercase", "addExclaim"], "expected": "[A!]" }
+]`,
+    hints: {
+      "Brackets + uppercase": "Build from inside out: identity -> uppercase -> brackets. First step added wraps the result of later steps.",
+      "Empty pipeline returns input": "With no steps, just return the identity function: s => s",
+      "Order matters": "The first step in the list sees the original input and wraps all subsequent transformations",
+    },
+  },
+  {
+    id: "hto-linq-transform",
+    title: "HTO-6: LINQ as Higher-Order",
+    conceptTags: ["LINQ", "HTO", "transform", "Func", "Predicate"],
+    order: 12,
+    description: `## HTO Pattern: LINQ Transform
+
+**Intent:** Treat algorithms as data transforms using functions.
+
+**Signature:** \`Func<T, bool>\` for filters, \`Func<T, TResult>\` for projections.
+
+### LINQ is Pure HTO
+
+Every LINQ method accepts a delegate:
+
+\`\`\`csharp
+// Where accepts Func<T, bool>
+var evens = numbers.Where(n => n % 2 == 0);
+
+// Select accepts Func<T, TResult>
+var squares = numbers.Select(n => n * n);
+
+// OrderBy accepts Func<T, TKey>
+var sorted = people.OrderBy(p => p.Age);
+\`\`\`
+
+### Composing Transforms
+
+\`\`\`csharp
+var result = numbers
+    .Where(n => n > 0)           // Filter
+    .Select(n => n * 2)          // Transform
+    .Where(n => n < 100)         // Filter again
+    .OrderByDescending(n => n)   // Sort
+    .Take(5);                    // Limit
+\`\`\`
+
+### Custom LINQ-Style Methods
+
+You can create your own:
+
+\`\`\`csharp
+public static IEnumerable<T> WhereNot<T>(
+    this IEnumerable<T> source,
+    Func<T, bool> predicate)
+{
+    return source.Where(item => !predicate(item));
+}
+
+// Usage
+var odds = numbers.WhereNot(n => n % 2 == 0);
+\`\`\`
+
+### Your Task
+
+Implement \`Transform\` that applies a series of transformations to each item.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public class Exercise
+{
+    // Apply all transformations in sequence to each item
+    public static List<T> Transform<T>(
+        List<T> items,
+        params Func<T, T>[] transformations)
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var numbers = new List<int> { 1, 2, 3 };
+
+        Func<int, int> addOne = x => x + 1;
+        Func<int, int> double_it = x => x * 2;
+        Func<int, int> square = x => x * x;
+
+        // Apply: addOne, then double
+        var result = Transform(numbers, addOne, double_it);
+        // 1 -> 2 -> 4, 2 -> 3 -> 6, 3 -> 4 -> 8
+        Console.WriteLine($"[{string.Join(", ", result)}]");
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public class Exercise
+{
+    public static List<T> Transform<T>(
+        List<T> items,
+        params Func<T, T>[] transformations)
+    {
+        return items.Select(item =>
+        {
+            var result = item;
+            foreach (var transform in transformations)
+            {
+                result = transform(result);
+            }
+            return result;
+        }).ToList();
+    }
+
+    public static void Main()
+    {
+        var numbers = new List<int> { 1, 2, 3 };
+
+        Func<int, int> addOne = x => x + 1;
+        Func<int, int> double_it = x => x * 2;
+        Func<int, int> square = x => x * x;
+
+        var result = Transform(numbers, addOne, double_it);
+        Console.WriteLine($"[{string.Join(", ", result)}]");
+    }
+}`,
+    testCode: `[
+  { "name": "AddOne then double", "input": [1,2,3], "transforms": ["addOne", "double"], "expected": [4,6,8] },
+  { "name": "No transforms returns original", "input": [5,10], "transforms": [], "expected": [5,10] },
+  { "name": "Single transform", "input": [2,3], "transforms": ["square"], "expected": [4,9] },
+  { "name": "Three transforms", "input": [1], "transforms": ["addOne", "double", "square"], "expected": [16] },
+  { "name": "Empty list", "input": [], "transforms": ["addOne"], "expected": [] }
+]`,
+    hints: {
+      "AddOne then double": "For each item, apply transforms in order: item -> addOne -> double",
+      "No transforms returns original": "With no transformations, just return the items as-is",
+      "Three transforms": "1 -> addOne -> 2 -> double -> 4 -> square -> 16",
+    },
+  },
+  {
+    id: "hto-di-factory",
+    title: "HTO-5: DI Factory Pattern",
+    conceptTags: ["DI", "factory", "HTO", "IServiceProvider", "Func"],
+    order: 13,
+    description: `## HTO Pattern: DI Factory
+
+**Intent:** Create a service using runtime context.
+
+**Signature:** \`Func<IServiceProvider, TService>\`
+
+### The Factory Pattern in DI
+
+ASP.NET Core DI supports factory delegates:
+
+\`\`\`csharp
+services.AddSingleton<IMyService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var logger = sp.GetRequiredService<ILogger<MyService>>();
+    return new MyService(config["ApiKey"], logger);
+});
+\`\`\`
+
+### Why Use Factories?
+
+- **Conditional construction:** Choose implementation at runtime
+- **Complex initialization:** When constructor isn't enough
+- **Accessing other services:** Resolve dependencies manually
+
+### Factory vs Direct Registration
+
+\`\`\`csharp
+// Direct - DI handles everything
+services.AddSingleton<MyService>();
+
+// Factory - you control construction
+services.AddSingleton<IService>(sp => {
+    var env = sp.GetRequiredService<IHostEnvironment>();
+    return env.IsDevelopment()
+        ? new DevService()
+        : new ProdService();
+});
+\`\`\`
+
+### Pitfalls
+
+- Don't capture \`IServiceProvider\` in singletons and resolve scoped services later
+- Don't do heavy work in factories during startup
+
+### Your Task
+
+Implement \`CreateServiceFactory\` that returns a factory function.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+
+// Simulated service provider
+public interface IServiceProvider
+{
+    T GetService<T>() where T : class;
+}
+
+public class SimpleServiceProvider : IServiceProvider
+{
+    private readonly Dictionary<Type, object> _services = new();
+
+    public void Register<T>(T service) where T : class
+        => _services[typeof(T)] = service;
+
+    public T GetService<T>() where T : class
+        => _services.TryGetValue(typeof(T), out var svc) ? (T)svc : null;
+}
+
+public class Config { public string ApiKey { get; set; } }
+public class Logger { public void Log(string msg) => Console.WriteLine(msg); }
+public class ApiClient
+{
+    public string Key { get; }
+    public Logger Logger { get; }
+    public ApiClient(string key, Logger logger) { Key = key; Logger = logger; }
+}
+
+public class Exercise
+{
+    // Create a factory that builds ApiClient using services from the provider
+    public static Func<IServiceProvider, ApiClient> CreateApiClientFactory()
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var sp = new SimpleServiceProvider();
+        sp.Register(new Config { ApiKey = "secret-123" });
+        sp.Register(new Logger());
+
+        var factory = CreateApiClientFactory();
+        var client = factory(sp);
+
+        Console.WriteLine($"ApiClient created with key: {client.Key}");
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+
+public interface IServiceProvider
+{
+    T GetService<T>() where T : class;
+}
+
+public class SimpleServiceProvider : IServiceProvider
+{
+    private readonly Dictionary<Type, object> _services = new();
+
+    public void Register<T>(T service) where T : class
+        => _services[typeof(T)] = service;
+
+    public T GetService<T>() where T : class
+        => _services.TryGetValue(typeof(T), out var svc) ? (T)svc : null;
+}
+
+public class Config { public string ApiKey { get; set; } }
+public class Logger { public void Log(string msg) => Console.WriteLine(msg); }
+public class ApiClient
+{
+    public string Key { get; }
+    public Logger Logger { get; }
+    public ApiClient(string key, Logger logger) { Key = key; Logger = logger; }
+}
+
+public class Exercise
+{
+    public static Func<IServiceProvider, ApiClient> CreateApiClientFactory()
+    {
+        return sp =>
+        {
+            var config = sp.GetService<Config>();
+            var logger = sp.GetService<Logger>();
+            return new ApiClient(config.ApiKey, logger);
+        };
+    }
+
+    public static void Main()
+    {
+        var sp = new SimpleServiceProvider();
+        sp.Register(new Config { ApiKey = "secret-123" });
+        sp.Register(new Logger());
+
+        var factory = CreateApiClientFactory();
+        var client = factory(sp);
+
+        Console.WriteLine($"ApiClient created with key: {client.Key}");
+    }
+}`,
+    testCode: `[
+  { "name": "Factory creates client with correct key", "apiKey": "test-key", "expectedKey": "test-key" },
+  { "name": "Factory resolves logger", "apiKey": "key", "expectLoggerResolved": true },
+  { "name": "Factory is reusable", "callCount": 2, "expectDistinctInstances": true },
+  { "name": "Different configs produce different clients", "keys": ["key1", "key2"], "expectedKeys": ["key1", "key2"] }
+]`,
+    hints: {
+      "Factory creates client with correct key": "Return a lambda that takes IServiceProvider and uses GetService to resolve Config and Logger",
+      "Factory resolves logger": "Use sp.GetService<Logger>() to get the logger instance",
+      "Factory is reusable": "The factory function can be called multiple times with different providers",
+    },
+  },
+  {
+    id: "hto-route-handler",
+    title: "HTO-4: Minimal API Route Handlers",
+    conceptTags: ["Minimal API", "route handler", "Delegate", "RequestDelegate"],
+    order: 14,
+    description: `## HTO Pattern: Route Handler
+
+**Intent:** Declare endpoints by passing behavior (a delegate).
+
+**Signature:** \`Delegate\` → compiled to \`RequestDelegate\`.
+
+### Minimal API Route Handlers
+
+In ASP.NET Core Minimal APIs, you pass delegates to define endpoints:
+
+\`\`\`csharp
+app.MapGet("/hello", () => "Hello World!");
+
+app.MapGet("/users/{id}", (int id) => $"User {id}");
+
+app.MapPost("/users", (User user) => Results.Created($"/users/{user.Id}", user));
+\`\`\`
+
+### What Happens Behind the Scenes
+
+1. Your delegate (route handler) is passed to \`MapGet\`/\`MapPost\`
+2. \`RequestDelegateFactory.Create()\` compiles it into a \`RequestDelegate\`
+3. The framework handles parameter binding, result writing, etc.
+
+### RequestDelegate
+
+The core type: \`Task RequestDelegate(HttpContext context)\`
+
+Your simple \`() => "Hello"\` becomes a full \`RequestDelegate\` that:
+- Reads route values
+- Binds parameters
+- Writes the response
+
+### Sync vs Async Handlers
+
+\`\`\`csharp
+// Sync - framework wraps in Task
+app.MapGet("/sync", () => "Hello");
+
+// Async - you return Task
+app.MapGet("/async", async () => {
+    await Task.Delay(100);
+    return "Hello";
+});
+\`\`\`
+
+### Your Task
+
+Simulate the route handler pattern: create a router that maps paths to handlers.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    private readonly Dictionary<string, Func<Dictionary<string, string>, string>> _routes = new();
+
+    // Register a route handler
+    public void MapGet(string path, Func<Dictionary<string, string>, string> handler)
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    // Handle a request
+    public string HandleRequest(string path, Dictionary<string, string> routeValues)
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var router = new Exercise();
+
+        router.MapGet("/hello", _ => "Hello World!");
+        router.MapGet("/users/{id}", rv => $"User {rv["id"]}");
+        router.MapGet("/add", rv => $"Sum: {int.Parse(rv["a"]) + int.Parse(rv["b"])}");
+
+        Console.WriteLine(router.HandleRequest("/hello", new()));
+        Console.WriteLine(router.HandleRequest("/users/{id}", new() { ["id"] = "42" }));
+        Console.WriteLine(router.HandleRequest("/add", new() { ["a"] = "3", ["b"] = "5" }));
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    private readonly Dictionary<string, Func<Dictionary<string, string>, string>> _routes = new();
+
+    public void MapGet(string path, Func<Dictionary<string, string>, string> handler)
+    {
+        _routes[path] = handler;
+    }
+
+    public string HandleRequest(string path, Dictionary<string, string> routeValues)
+    {
+        if (_routes.TryGetValue(path, out var handler))
+        {
+            return handler(routeValues);
+        }
+        return "404 Not Found";
+    }
+
+    public static void Main()
+    {
+        var router = new Exercise();
+
+        router.MapGet("/hello", _ => "Hello World!");
+        router.MapGet("/users/{id}", rv => $"User {rv["id"]}");
+        router.MapGet("/add", rv => $"Sum: {int.Parse(rv["a"]) + int.Parse(rv["b"])}");
+
+        Console.WriteLine(router.HandleRequest("/hello", new()));
+        Console.WriteLine(router.HandleRequest("/users/{id}", new() { ["id"] = "42" }));
+        Console.WriteLine(router.HandleRequest("/add", new() { ["a"] = "3", ["b"] = "5" }));
+    }
+}`,
+    testCode: `[
+  { "name": "Simple route works", "path": "/hello", "routeValues": {}, "expected": "Hello World!" },
+  { "name": "Route with parameter", "path": "/users/{id}", "routeValues": {"id": "42"}, "expected": "User 42" },
+  { "name": "Route with multiple params", "path": "/add", "routeValues": {"a": "3", "b": "5"}, "expected": "Sum: 8" },
+  { "name": "Unknown route returns 404", "path": "/unknown", "routeValues": {}, "expected": "404 Not Found" },
+  { "name": "Different IDs work", "path": "/users/{id}", "routeValues": {"id": "99"}, "expected": "User 99" }
+]`,
+    hints: {
+      "Simple route works": "Store the handler in _routes dictionary with path as key",
+      "Route with parameter": "The handler receives routeValues and can access rv[\"id\"]",
+      "Unknown route returns 404": "If the path isn't in _routes, return a 404 message",
+    },
+  },
+  {
+    id: "hto-background",
+    title: "HTO-7: Background Callbacks",
+    conceptTags: ["background", "timer", "HTO", "CancellationToken", "async"],
+    order: 15,
+    description: `## HTO Pattern: Background Callback
+
+**Intent:** Schedule behavior to run later or repeatedly.
+
+**Signature:** Often \`Func<CancellationToken, Task>\` or \`Action<object?>\`.
+
+### Background Work Patterns
+
+\`\`\`csharp
+// Timer callback
+var timer = new Timer(
+    callback: state => Console.WriteLine("Tick!"),
+    state: null,
+    dueTime: 0,
+    period: 1000);
+
+// Background task with cancellation
+async Task RunBackground(Func<CancellationToken, Task> work, CancellationToken ct)
+{
+    while (!ct.IsCancellationRequested)
+    {
+        await work(ct);
+        await Task.Delay(1000, ct);
+    }
+}
+\`\`\`
+
+### ASP.NET Core BackgroundService
+
+\`\`\`csharp
+public class MyWorker : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            // Do work
+            await Task.Delay(1000, ct);
+        }
+    }
+}
+\`\`\`
+
+### Pitfalls
+
+- **Unobserved exceptions:** Always handle/log exceptions in background work
+- **Lifetime issues:** Create scopes for scoped services in singletons
+- **Forgetting cancellation:** Always respect \`CancellationToken\`
+
+### Your Task
+
+Implement a simple scheduler that runs callbacks at specified intervals.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    // Simulate running callbacks for a number of "ticks"
+    // Returns list of outputs from each tick
+    public static List<string> RunSchedule(
+        int ticks,
+        Func<int, string> onTick)
+    {
+        // Your code here
+        // Call onTick for each tick (0 to ticks-1) and collect results
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        var results = RunSchedule(5, tick => $"Tick {tick} at {DateTime.Now:HH:mm:ss}");
+        foreach (var r in results)
+            Console.WriteLine(r);
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    public static List<string> RunSchedule(
+        int ticks,
+        Func<int, string> onTick)
+    {
+        var results = new List<string>();
+        for (int i = 0; i < ticks; i++)
+        {
+            results.Add(onTick(i));
+        }
+        return results;
+    }
+
+    public static void Main()
+    {
+        var results = RunSchedule(5, tick => $"Tick {tick}");
+        foreach (var r in results)
+            Console.WriteLine(r);
+    }
+}`,
+    testCode: `[
+  { "name": "5 ticks produces 5 results", "ticks": 5, "expectedCount": 5 },
+  { "name": "0 ticks produces empty", "ticks": 0, "expectedCount": 0 },
+  { "name": "Tick indices are correct", "ticks": 3, "expectedIndices": [0, 1, 2] },
+  { "name": "Callback receives tick number", "ticks": 2, "expected": ["Tick 0", "Tick 1"] },
+  { "name": "Single tick works", "ticks": 1, "expectedCount": 1 }
+]`,
+    hints: {
+      "5 ticks produces 5 results": "Loop from 0 to ticks-1, calling onTick(i) each time",
+      "0 ticks produces empty": "The loop doesn't execute, returning an empty list",
+      "Tick indices are correct": "Pass the loop variable i to onTick",
+    },
+  },
+
+  // ============================================
+  // MODULE 4: ASP.NET CORE INTEGRATION
+  // ============================================
+
+  {
+    id: "request-delegate",
+    title: "RequestDelegate Anatomy",
+    conceptTags: ["RequestDelegate", "HttpContext", "middleware", "pipeline"],
+    order: 16,
+    description: `## RequestDelegate: The Core Abstraction
+
+**Definition:** \`Task RequestDelegate(HttpContext context)\`
+
+This single delegate type is the foundation of ASP.NET Core's request pipeline.
+
+### How the Pipeline Works
+
+\`\`\`
+Request → [Middleware 1] → [Middleware 2] → [Middleware 3] → Response
+              ↓                ↓                ↓
+          RequestDelegate  RequestDelegate  RequestDelegate
+\`\`\`
+
+Each middleware:
+1. Receives \`HttpContext\`
+2. Can modify request/response
+3. Decides whether to call \`next()\`
+4. Can do work after \`next()\` returns
+
+### Building a Pipeline
+
+\`\`\`csharp
+app.Use(async (context, next) =>
+{
+    // Before
+    Console.WriteLine($"Request: {context.Request.Path}");
+
+    await next(context);  // Continue pipeline
+
+    // After
+    Console.WriteLine($"Response: {context.Response.StatusCode}");
+});
+\`\`\`
+
+### Short-Circuiting
+
+\`\`\`csharp
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/health")
+    {
+        context.Response.StatusCode = 200;
+        await context.Response.WriteAsync("OK");
+        return; // Don't call next - short circuit!
+    }
+    await next(context);
+});
+\`\`\`
+
+### Your Task
+
+Simulate a request pipeline with multiple middleware components.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+public class HttpContext
+{
+    public string Path { get; set; }
+    public int StatusCode { get; set; } = 200;
+    public string ResponseBody { get; set; } = "";
+    public List<string> Log { get; } = new();
+}
+
+public class Exercise
+{
+    // Build a pipeline from middleware functions
+    // Each middleware: (context, next) => Task
+    public static Func<HttpContext, Task> BuildPipeline(
+        List<Func<HttpContext, Func<Task>, Task>> middlewares)
+    {
+        // Your code here
+        throw new NotImplementedException();
+    }
+
+    public static async Task Main()
+    {
+        var middlewares = new List<Func<HttpContext, Func<Task>, Task>>
+        {
+            async (ctx, next) => {
+                ctx.Log.Add("MW1: Before");
+                await next();
+                ctx.Log.Add("MW1: After");
+            },
+            async (ctx, next) => {
+                ctx.Log.Add("MW2: Before");
+                await next();
+                ctx.Log.Add("MW2: After");
+            },
+        };
+
+        var pipeline = BuildPipeline(middlewares);
+        var context = new HttpContext { Path = "/test" };
+        await pipeline(context);
+
+        Console.WriteLine(string.Join(" -> ", context.Log));
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+public class HttpContext
+{
+    public string Path { get; set; }
+    public int StatusCode { get; set; } = 200;
+    public string ResponseBody { get; set; } = "";
+    public List<string> Log { get; } = new();
+}
+
+public class Exercise
+{
+    public static Func<HttpContext, Task> BuildPipeline(
+        List<Func<HttpContext, Func<Task>, Task>> middlewares)
+    {
+        Func<HttpContext, Task> app = ctx => Task.CompletedTask;
+
+        for (int i = middlewares.Count - 1; i >= 0; i--)
+        {
+            var middleware = middlewares[i];
+            var next = app;
+            app = ctx => middleware(ctx, () => next(ctx));
+        }
+
+        return app;
+    }
+
+    public static async Task Main()
+    {
+        var middlewares = new List<Func<HttpContext, Func<Task>, Task>>
+        {
+            async (ctx, next) => {
+                ctx.Log.Add("MW1: Before");
+                await next();
+                ctx.Log.Add("MW1: After");
+            },
+            async (ctx, next) => {
+                ctx.Log.Add("MW2: Before");
+                await next();
+                ctx.Log.Add("MW2: After");
+            },
+        };
+
+        var pipeline = BuildPipeline(middlewares);
+        var context = new HttpContext { Path = "/test" };
+        await pipeline(context);
+
+        Console.WriteLine(string.Join(" -> ", context.Log));
+    }
+}`,
+    testCode: `[
+  { "name": "Middlewares execute in order", "expected": ["MW1: Before", "MW2: Before", "MW2: After", "MW1: After"] },
+  { "name": "Empty pipeline works", "middlewareCount": 0, "expectSuccess": true },
+  { "name": "Single middleware works", "middlewareCount": 1, "expectedLogCount": 2 },
+  { "name": "Context is passed through", "path": "/test", "expectPathPreserved": true },
+  { "name": "Short-circuit stops chain", "shortCircuitAt": 0, "expectedLogCount": 1 }
+]`,
+    hints: {
+      "Middlewares execute in order": "Build from inside out: terminal -> MW2 -> MW1. First middleware wraps all others.",
+      "Empty pipeline works": "With no middlewares, return a function that just completes",
+      "Short-circuit stops chain": "If a middleware doesn't call next(), subsequent middlewares don't run",
+    },
+  },
+  {
+    id: "middleware-perf",
+    title: "Middleware Performance",
+    conceptTags: ["performance", "allocations", "Use overloads", "ASP0016"],
+    order: 17,
+    description: `## Middleware Performance Pitfalls
+
+### The Two \`Use\` Overloads
+
+ASP.NET Core has two \`Use\` overloads with different performance characteristics:
+
+\`\`\`csharp
+// Overload 1: Takes Func<Task> - allocates per request!
+app.Use(async (context, next) =>
+{
+    await next(); // 'next' is Func<Task>
+});
+
+// Overload 2: Takes HttpContext in next - preferred!
+app.Use(async (context, next) =>
+{
+    await next(context); // 'next' is RequestDelegate
+});
+\`\`\`
+
+**Why it matters:** The first overload allocates two objects per request. The second avoids this.
+
+### ASP0016: Return Value Discarded
+
+\`\`\`csharp
+// WARNING: ASP0016 - return value discarded!
+app.MapGet("/bad", () => Task.FromResult("Hello"));
+
+// Correct: return the string directly
+app.MapGet("/good", () => "Hello");
+
+// Or use Results
+app.MapGet("/also-good", () => Results.Ok("Hello"));
+\`\`\`
+
+### Closure Allocations
+
+\`\`\`csharp
+// Bad: captures 'logger' in closure - allocates per request
+app.Use(async (ctx, next) =>
+{
+    logger.Log(ctx.Request.Path); // captures 'logger'
+    await next(ctx);
+});
+
+// Better: inject via DI in a middleware class
+\`\`\`
+
+### Your Task
+
+Identify and fix performance issues in middleware code.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    // Count allocations in a simulated middleware scenario
+    // Return the number of allocations that would occur for N requests
+
+    public static int CountAllocations_Bad(int requestCount)
+    {
+        // Bad pattern: closure captures outer variable
+        // Each request creates: 1 closure + 1 Func<Task>
+        // Your code: return total allocations
+        throw new NotImplementedException();
+    }
+
+    public static int CountAllocations_Good(int requestCount)
+    {
+        // Good pattern: no closures, uses RequestDelegate
+        // Each request creates: 0 allocations (delegate reused)
+        // Your code: return total allocations
+        throw new NotImplementedException();
+    }
+
+    public static void Main()
+    {
+        int requests = 1000;
+        Console.WriteLine($"Bad pattern: {CountAllocations_Bad(requests)} allocations");
+        Console.WriteLine($"Good pattern: {CountAllocations_Good(requests)} allocations");
+        Console.WriteLine($"Savings: {CountAllocations_Bad(requests) - CountAllocations_Good(requests)}");
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+
+public class Exercise
+{
+    public static int CountAllocations_Bad(int requestCount)
+    {
+        // Bad pattern allocates 2 objects per request:
+        // 1. Closure object to capture state
+        // 2. Func<Task> delegate instance
+        return requestCount * 2;
+    }
+
+    public static int CountAllocations_Good(int requestCount)
+    {
+        // Good pattern: delegate is created once and reused
+        // 0 per-request allocations
+        return 0;
+    }
+
+    public static void Main()
+    {
+        int requests = 1000;
+        Console.WriteLine($"Bad pattern: {CountAllocations_Bad(requests)} allocations");
+        Console.WriteLine($"Good pattern: {CountAllocations_Good(requests)} allocations");
+        Console.WriteLine($"Savings: {CountAllocations_Bad(requests) - CountAllocations_Good(requests)}");
+    }
+}`,
+    testCode: `[
+  { "name": "Bad pattern: 1000 requests = 2000 allocations", "requests": 1000, "pattern": "bad", "expected": 2000 },
+  { "name": "Good pattern: 1000 requests = 0 allocations", "requests": 1000, "pattern": "good", "expected": 0 },
+  { "name": "Bad pattern: 0 requests = 0 allocations", "requests": 0, "pattern": "bad", "expected": 0 },
+  { "name": "Bad pattern: 1 request = 2 allocations", "requests": 1, "pattern": "bad", "expected": 2 },
+  { "name": "Good pattern scales to millions", "requests": 1000000, "pattern": "good", "expected": 0 }
+]`,
+    hints: {
+      "Bad pattern: 1000 requests = 2000 allocations": "The bad Use overload creates 2 allocations per request: closure + Func<Task>",
+      "Good pattern: 1000 requests = 0 allocations": "The good overload reuses the RequestDelegate - no per-request allocations",
+      "Good pattern scales to millions": "With 0 allocations per request, it doesn't matter how many requests",
+    },
+  },
+  {
+    id: "capstone-api",
+    title: "Capstone: Build a Mini API",
+    conceptTags: ["capstone", "integration", "Minimal API", "middleware", "DI"],
+    order: 18,
+    description: `## Capstone: Putting It All Together
+
+Build a mini API framework that combines all the HTO patterns you've learned:
+
+1. **DI Factory** - Service registration with factories
+2. **Middleware Pipeline** - Request processing chain
+3. **Route Handlers** - Endpoint definitions
+4. **Callbacks** - Logging and notifications
+5. **Strategy** - Configurable behaviors
+
+### The Mini Framework
+
+\`\`\`csharp
+var app = new MiniApp();
+
+// Register services (HTO-5: DI Factory)
+app.Services.Add<ILogger>(() => new ConsoleLogger());
+
+// Add middleware (HTO-3: Pipeline)
+app.Use(async (ctx, next) => {
+    Console.WriteLine($"Request: {ctx.Path}");
+    await next();
+});
+
+// Map routes (HTO-4: Route Handler)
+app.MapGet("/hello", () => "Hello World!");
+app.MapGet("/users/{id}", (int id) => $"User {id}");
+
+// Run
+await app.HandleRequest("/hello");
+\`\`\`
+
+### Your Task
+
+Complete the \`MiniApp\` implementation that ties together all patterns.`,
+    skeleton: `using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+public class RequestContext
+{
+    public string Path { get; set; }
+    public Dictionary<string, string> RouteValues { get; } = new();
+    public string Response { get; set; } = "";
+    public List<string> Logs { get; } = new();
+}
+
+public class MiniApp
+{
+    private readonly Dictionary<string, Func<RequestContext, string>> _routes = new();
+    private readonly List<Func<RequestContext, Func<Task>, Task>> _middleware = new();
+
+    public void Use(Func<RequestContext, Func<Task>, Task> middleware)
+    {
+        // Your code: add middleware to the list
+        throw new NotImplementedException();
+    }
+
+    public void MapGet(string path, Func<RequestContext, string> handler)
+    {
+        // Your code: register route handler
+        throw new NotImplementedException();
+    }
+
+    public async Task<string> HandleRequest(string path, Dictionary<string, string> routeValues = null)
+    {
+        // Your code:
+        // 1. Create context
+        // 2. Build pipeline with middleware + endpoint
+        // 3. Execute and return response
+        throw new NotImplementedException();
+    }
+}
+
+public class Exercise
+{
+    public static async Task Main()
+    {
+        var app = new MiniApp();
+
+        // Logging middleware
+        app.Use(async (ctx, next) => {
+            ctx.Logs.Add($"[LOG] {ctx.Path}");
+            await next();
+            ctx.Logs.Add($"[LOG] Done");
+        });
+
+        // Routes
+        app.MapGet("/hello", ctx => "Hello World!");
+        app.MapGet("/greet/{name}", ctx => $"Hello, {ctx.RouteValues["name"]}!");
+
+        // Test
+        var response = await app.HandleRequest("/hello");
+        Console.WriteLine(response);
+
+        response = await app.HandleRequest("/greet/{name}", new() { ["name"] = "Alice" });
+        Console.WriteLine(response);
+    }
+}`,
+    referenceSolution: `using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+public class RequestContext
+{
+    public string Path { get; set; }
+    public Dictionary<string, string> RouteValues { get; } = new();
+    public string Response { get; set; } = "";
+    public List<string> Logs { get; } = new();
+}
+
+public class MiniApp
+{
+    private readonly Dictionary<string, Func<RequestContext, string>> _routes = new();
+    private readonly List<Func<RequestContext, Func<Task>, Task>> _middleware = new();
+
+    public void Use(Func<RequestContext, Func<Task>, Task> middleware)
+    {
+        _middleware.Add(middleware);
+    }
+
+    public void MapGet(string path, Func<RequestContext, string> handler)
+    {
+        _routes[path] = handler;
+    }
+
+    public async Task<string> HandleRequest(string path, Dictionary<string, string> routeValues = null)
+    {
+        var context = new RequestContext { Path = path };
+        if (routeValues != null)
+        {
+            foreach (var kv in routeValues)
+                context.RouteValues[kv.Key] = kv.Value;
+        }
+
+        // Build pipeline: terminal is the route handler
+        Func<Task> terminal = () =>
+        {
+            if (_routes.TryGetValue(path, out var handler))
+                context.Response = handler(context);
+            else
+                context.Response = "404 Not Found";
+            return Task.CompletedTask;
+        };
+
+        // Wrap with middleware (reverse order)
+        var next = terminal;
+        for (int i = _middleware.Count - 1; i >= 0; i--)
+        {
+            var mw = _middleware[i];
+            var currentNext = next;
+            next = () => mw(context, currentNext);
+        }
+
+        await next();
+        return context.Response;
+    }
+}
+
+public class Exercise
+{
+    public static async Task Main()
+    {
+        var app = new MiniApp();
+
+        app.Use(async (ctx, next) => {
+            ctx.Logs.Add($"[LOG] {ctx.Path}");
+            await next();
+            ctx.Logs.Add($"[LOG] Done");
+        });
+
+        app.MapGet("/hello", ctx => "Hello World!");
+        app.MapGet("/greet/{name}", ctx => $"Hello, {ctx.RouteValues["name"]}!");
+
+        var response = await app.HandleRequest("/hello");
+        Console.WriteLine(response);
+
+        response = await app.HandleRequest("/greet/{name}", new() { ["name"] = "Alice" });
+        Console.WriteLine(response);
+    }
+}`,
+    testCode: `[
+  { "name": "Simple route returns response", "path": "/hello", "expected": "Hello World!" },
+  { "name": "Route with parameter works", "path": "/greet/{name}", "routeValues": {"name": "Alice"}, "expected": "Hello, Alice!" },
+  { "name": "Unknown route returns 404", "path": "/unknown", "expected": "404 Not Found" },
+  { "name": "Middleware executes", "path": "/hello", "expectLogsContain": "[LOG]" },
+  { "name": "Multiple middleware chain correctly", "middlewareCount": 2, "expectOrderPreserved": true }
+]`,
+    hints: {
+      "Simple route returns response": "Look up the path in _routes and call the handler with context",
+      "Route with parameter works": "Route values should be copied to context.RouteValues before handling",
+      "Middleware executes": "Build the pipeline by wrapping the terminal handler with each middleware in reverse order",
+    },
+  },
 ];
