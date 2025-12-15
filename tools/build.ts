@@ -27,12 +27,21 @@ async function buildAll() {
       server: {
         publicDir: {
           name: "./client/public",
-          copyOnBuild: true,
         },
       },
       output: {
         distPath: {
           root: "dist/public",
+        },
+        copy: [
+          { from: "./client/public", to: "." },
+        ],
+      },
+      tools: {
+        cssLoader: {
+          url: {
+            filter: (url: string) => !url.startsWith("/"),
+          },
         },
       },
     },

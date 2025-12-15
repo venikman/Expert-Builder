@@ -6,6 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Lesson } from "@shared/schema";
 
+// Custom theme matching editor colors
+const codeTheme = {
+  ...oneDark,
+  'pre[class*="language-"]': {
+    ...oneDark['pre[class*="language-"]'],
+    background: "#171717", // matches editor background
+  },
+  'code[class*="language-"]': {
+    ...oneDark['code[class*="language-"]'],
+    background: "#171717",
+  },
+};
+
 interface LessonContentProps {
   lesson: Lesson;
 }
@@ -42,8 +55,8 @@ export function LessonContent({ lesson }: LessonContentProps) {
                 
                 if (isInline) {
                   return (
-                    <code 
-                      className="px-1.5 py-0.5 rounded bg-muted text-sm font-mono"
+                    <code
+                      className="px-2 py-1 rounded-md bg-[#171717] text-sm font-mono text-[#e5c07b]"
                       {...props}
                     >
                       {children}
@@ -56,13 +69,21 @@ export function LessonContent({ lesson }: LessonContentProps) {
                 
                 return (
                   <SyntaxHighlighter
-                    style={oneDark}
+                    style={codeTheme}
                     language={language === "csharp" ? "csharp" : language}
                     PreTag="div"
+                    showLineNumbers
                     customStyle={{
                       margin: 0,
                       borderRadius: "0.5rem",
                       fontSize: "0.875rem",
+                      padding: "1rem",
+                    }}
+                    lineNumberStyle={{
+                      minWidth: "2.5em",
+                      paddingRight: "1em",
+                      color: "#4a4a4a",
+                      userSelect: "none",
                     }}
                   >
                     {codeString}

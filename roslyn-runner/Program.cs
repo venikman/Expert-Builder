@@ -80,6 +80,19 @@ static ExecuteResponse CompileCode(string code, int timeoutMs)
 {
     var sw = System.Diagnostics.Stopwatch.StartNew();
 
+    // Security check first
+    var (isValid, securityError) = SecurityValidator.Validate(code);
+    if (!isValid)
+    {
+        return new ExecuteResponse
+        {
+            Success = false,
+            Error = securityError,
+            Diagnostics = [securityError!],
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+
     try
     {
         var options = ScriptOptions.Default
@@ -144,6 +157,19 @@ static async Task<ExecuteResponse> ExecuteCode(string code, int timeoutMs)
     var sw = System.Diagnostics.Stopwatch.StartNew();
     var output = new StringBuilder();
     var errors = new StringBuilder();
+
+    // Security check first
+    var (isValid, securityError) = SecurityValidator.Validate(code);
+    if (!isValid)
+    {
+        return new ExecuteResponse
+        {
+            Success = false,
+            Error = securityError,
+            Diagnostics = [securityError!],
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
 
     try
     {

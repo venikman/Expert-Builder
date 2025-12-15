@@ -222,14 +222,16 @@ export function LessonPage({
     <>
       <div className="hidden lg:flex h-full">
         <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={40} minSize={25}>
-            <LessonContent lesson={lesson} />
+          <ResizablePanel defaultSize={40} minSize={20}>
+            <div className="h-full min-w-[320px]">
+              <LessonContent lesson={lesson} />
+            </div>
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize={60} minSize={40}>
-            <div className="h-full flex flex-col">
+          <ResizablePanel defaultSize={60} minSize={30}>
+            <div className="h-full flex flex-col min-w-[480px]">
               <ResizablePanelGroup direction="vertical" className="flex-1">
                 <ResizablePanel defaultSize={70} minSize={30}>
                   <CodeEditor
@@ -274,6 +276,8 @@ export function LessonPage({
               {isOutputCollapsed && (
                 <button
                   onClick={toggleOutputPanel}
+                  aria-label="Expand console panel"
+                  aria-expanded={!isOutputCollapsed}
                   className="flex items-center justify-between px-3 py-1.5 border-t bg-muted/30 hover-elevate text-sm text-muted-foreground"
                   data-testid="button-expand-output"
                 >

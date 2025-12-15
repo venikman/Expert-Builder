@@ -46,7 +46,7 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background max-w-screen-2xl mx-auto">
       <Header
         lessons={lessons}
         currentLessonIndex={currentLessonIndex}
