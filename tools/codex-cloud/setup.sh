@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # Use sudo when available (Codex Cloud images often run as root).
 SUDO=""
@@ -47,3 +47,4 @@ dotnet restore "$ROOT_DIR/roslyn-runner/RoslynRunner.csproj"
 dotnet build -c Release "$ROOT_DIR/roslyn-runner/RoslynRunner.csproj" --nologo
 
 echo "Done. You can now run: bun run dev"
+

@@ -40,14 +40,15 @@ export function ConsoleOutput({ lines, onClear }: ConsoleOutputProps) {
           size="icon"
           onClick={onClear}
           disabled={lines.length === 0}
+          aria-label="Clear console output"
           data-testid="button-clear-console"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
 
       <ScrollArea className="flex-1" ref={scrollRef}>
-        <div className="p-3 font-mono text-sm space-y-1">
+        <div className="p-3 font-mono text-console space-y-1">
           {lines.length === 0 ? (
             <div className="text-muted-foreground/60 text-center py-8">
               <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
-import Editor, { OnMount, Monaco } from "@monaco-editor/react";
+import Editor, { OnMount, BeforeMount, Monaco } from "@monaco-editor/react";
 import { initVimMode } from "monaco-vim";
 import { Play, Send, Loader2, Minus, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -152,6 +152,146 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   // Debounced diagnostics fetch (1.5 second delay to avoid hammering the server)
   const debouncedFetchDiagnostics = useDebouncedCallback(fetchDiagnostics, 1500);
 
+  // Define custom themes before editor mounts - Cursor IDE inspired
+  const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+    monaco.editor.defineTheme("app-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        // Cursor-inspired syntax highlighting for C#
+        // Keywords: using, class, public, private, static, void, if, else, etc.
+        { token: "keyword", foreground: "AAA0FA" },              // lavender
+        { token: "keyword.cs", foreground: "AAA0FA" },
+        { token: "keyword.flow.cs", foreground: "AAA0FA" },
+        // Strings
+        { token: "string", foreground: "83D6C5" },               // teal
+        { token: "string.cs", foreground: "83D6C5" },
+        { token: "string.escape", foreground: "EFB080" },        // amber for escapes
+        { token: "string.escape.cs", foreground: "EFB080" },
+        // Numbers
+        { token: "number", foreground: "EFB080" },               // amber
+        { token: "number.cs", foreground: "EFB080" },
+        { token: "number.float", foreground: "EFB080" },
+        { token: "number.hex", foreground: "EFB080" },
+        // Comments
+        { token: "comment", foreground: "6B6B6B", fontStyle: "italic" },
+        { token: "comment.cs", foreground: "6B6B6B", fontStyle: "italic" },
+        { token: "comment.doc", foreground: "6B8B6B", fontStyle: "italic" },
+        // Types and classes
+        { token: "type", foreground: "87C3FF" },                 // blue
+        { token: "type.cs", foreground: "87C3FF" },
+        { token: "type.identifier", foreground: "87C3FF" },
+        { token: "type.identifier.cs", foreground: "87C3FF" },
+        { token: "class", foreground: "87C3FF" },
+        { token: "class.cs", foreground: "87C3FF" },
+        { token: "struct", foreground: "87C3FF" },
+        { token: "interface", foreground: "82D2CE" },            // mint for interfaces
+        { token: "enum", foreground: "87C3FF" },
+        // Identifiers and variables
+        { token: "identifier", foreground: "E4E4E4" },
+        { token: "identifier.cs", foreground: "E4E4E4" },
+        { token: "variable", foreground: "E4E4E4" },
+        // Delimiters and operators
+        { token: "delimiter", foreground: "A0A0A0" },
+        { token: "delimiter.cs", foreground: "A0A0A0" },
+        { token: "delimiter.bracket", foreground: "A0A0A0" },
+        { token: "delimiter.parenthesis", foreground: "A0A0A0" },
+        { token: "delimiter.curly", foreground: "A0A0A0" },
+        { token: "delimiter.square", foreground: "A0A0A0" },
+        { token: "delimiter.angle", foreground: "87C3FF" },      // generics
+        { token: "operator", foreground: "C1808A" },             // rose
+        { token: "operator.cs", foreground: "C1808A" },
+        // Namespace
+        { token: "namespace", foreground: "82D2CE" },            // mint
+        { token: "namespace.cs", foreground: "82D2CE" },
+        // Methods
+        { token: "entity.name.function", foreground: "82D2CE" },
+        { token: "metatag", foreground: "AAA0FA" },              // attributes
+        { token: "annotation", foreground: "AAA0FA" },
+      ],
+      colors: {
+        // Near-black backgrounds - Cursor style
+        "editor.background": "#0a0a0a",
+        "editor.foreground": "#e4e4e4",
+        "editor.lineHighlightBackground": "#151515",
+        "editorLineNumber.foreground": "#404040",
+        "editorLineNumber.activeForeground": "#707070",
+        // Teal selection and cursor - Cursor accent
+        "editor.selectionBackground": "#83D6C535",
+        "editor.selectionHighlightBackground": "#83D6C520",
+        "editor.wordHighlightBackground": "#83D6C520",
+        "editor.wordHighlightStrongBackground": "#83D6C530",
+        "editorCursor.foreground": "#83D6C5",
+        "editorCursor.background": "#0a0a0a",
+        // Gutter and widgets
+        "editorGutter.background": "#0a0a0a",
+        "editorWidget.background": "#121212",
+        "editorWidget.border": "#252525",
+        "editorSuggestWidget.background": "#121212",
+        "editorSuggestWidget.border": "#252525",
+        "editorSuggestWidget.foreground": "#e4e4e4",
+        "editorSuggestWidget.selectedBackground": "#83D6C525",
+        "editorSuggestWidget.highlightForeground": "#83D6C5",
+        "editorHoverWidget.background": "#121212",
+        "editorHoverWidget.border": "#252525",
+        // Bracket matching with teal
+        "editorBracketMatch.background": "#83D6C530",
+        "editorBracketMatch.border": "#83D6C560",
+        // Bracket pair colorization
+        "editorBracketHighlight.foreground1": "#83D6C5",
+        "editorBracketHighlight.foreground2": "#AAA0FA",
+        "editorBracketHighlight.foreground3": "#EFB080",
+        "editorBracketHighlight.foreground4": "#87C3FF",
+        // Find/search
+        "editor.findMatchBackground": "#EFB08050",
+        "editor.findMatchHighlightBackground": "#EFB08030",
+        "editor.findMatchBorder": "#EFB080",
+        // Indent guides
+        "editorIndentGuide.background": "#252525",
+        "editorIndentGuide.activeBackground": "#404040",
+        // Scrollbar
+        "scrollbarSlider.background": "#ffffff12",
+        "scrollbarSlider.hoverBackground": "#ffffff20",
+        "scrollbarSlider.activeBackground": "#ffffff30",
+        // Minimap
+        "minimap.background": "#0a0a0a",
+      },
+    });
+
+    monaco.editor.defineTheme("app-light", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: "7C3AED" },              // purple
+        { token: "keyword.cs", foreground: "7C3AED" },
+        { token: "string", foreground: "0D9488" },               // teal
+        { token: "string.cs", foreground: "0D9488" },
+        { token: "number", foreground: "D97706" },               // amber
+        { token: "number.cs", foreground: "D97706" },
+        { token: "comment", foreground: "6B7280", fontStyle: "italic" },
+        { token: "comment.cs", foreground: "6B7280", fontStyle: "italic" },
+        { token: "type", foreground: "2563EB" },                 // blue
+        { token: "type.cs", foreground: "2563EB" },
+        { token: "type.identifier", foreground: "2563EB" },
+        { token: "namespace", foreground: "059669" },            // mint
+        { token: "delimiter", foreground: "374151" },
+        { token: "operator", foreground: "BE185D" },             // rose
+      ],
+      colors: {
+        "editor.background": "#fafafa",
+        "editor.foreground": "#1f2937",
+        "editor.lineHighlightBackground": "#f3f4f6",
+        "editor.selectionBackground": "#83D6C545",
+        "editorCursor.foreground": "#0D9488",
+        "editorBracketMatch.background": "#83D6C540",
+        "editorBracketMatch.border": "#83D6C5",
+        "editorBracketHighlight.foreground1": "#0D9488",
+        "editorBracketHighlight.foreground2": "#7C3AED",
+        "editorBracketHighlight.foreground3": "#D97706",
+      },
+    });
+  }, []);
+
   const handleEditorMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
@@ -287,7 +427,7 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-2 py-1 border-b bg-background">
+      <div className="flex items-center justify-between h-12 px-4 border-b bg-background">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-chart-2" />
           <span className="text-sm font-medium text-muted-foreground font-mono">
@@ -302,6 +442,8 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
             <TooltipTrigger asChild>
               <button
                 onClick={toggleVimMode}
+                aria-label={vimEnabled ? "Disable Vim mode" : "Enable Vim mode"}
+                aria-pressed={vimEnabled}
                 className={`text-xs px-1.5 py-0.5 rounded font-mono font-medium transition-colors ${
                   vimEnabled
                     ? "bg-chart-5/20 text-chart-5"
@@ -323,10 +465,11 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
                 <button
                   onClick={decreaseFontSize}
                   disabled={fontSize <= MIN_FONT_SIZE}
+                  aria-label="Decrease font size"
                   className="p-1 rounded text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
                   data-testid="button-decrease-font"
                 >
-                  <Minus className="h-3 w-3" />
+                  <Minus className="h-3 w-3" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Decrease font size</TooltipContent>
@@ -337,10 +480,11 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
                 <button
                   onClick={increaseFontSize}
                   disabled={fontSize >= MAX_FONT_SIZE}
+                  aria-label="Increase font size"
                   className="p-1 rounded text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
                   data-testid="button-increase-font"
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3 w-3" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Increase font size</TooltipContent>
@@ -352,10 +496,11 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
               <TooltipTrigger asChild>
                 <button
                   onClick={handleReset}
+                  aria-label="Reset to original code"
                   className="p-1 rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                   data-testid="button-reset-code"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Reset to original code</TooltipContent>
@@ -423,13 +568,14 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
           language="csharp"
           value={code}
           onChange={handleEditorChange}
+          beforeMount={handleBeforeMount}
           onMount={handleEditorMount}
-          theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
+          theme={resolvedTheme === "dark" ? "app-dark" : "app-light"}
           options={{
             minimap: { enabled: false },
             fontSize: fontSize,
             lineHeight: Math.round(fontSize * 1.5),
-            fontFamily: "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
+            fontFamily: "'Monaspace Argon', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
             fontLigatures: true,
             padding: { top: 16, bottom: 16 },
             scrollBeyondLastLine: false,

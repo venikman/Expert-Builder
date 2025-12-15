@@ -7,7 +7,7 @@ import type { Lesson } from "@shared/schema";
 
 export function HomeSkeleton() {
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background max-w-screen-2xl mx-auto">
       <header className="h-16 border-b flex items-center justify-between px-4">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-8 w-32" />
@@ -46,7 +46,7 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background max-w-screen-2xl mx-auto">
       <Header
         lessons={lessons}
         currentLessonIndex={currentLessonIndex}

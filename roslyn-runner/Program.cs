@@ -75,10 +75,33 @@ static void SendResponse(ExecuteResponse response)
     Console.Out.Flush();
 }
 
+static ExecuteResponse? ValidateSecurity(string code, System.Diagnostics.Stopwatch sw)
+{
+    var (isValid, securityError) = SecurityValidator.Validate(code);
+    if (isValid)
+    {
+        return null;
+    }
+
+    return new ExecuteResponse
+    {
+        Success = false,
+        Error = securityError,
+        Diagnostics = [securityError!],
+        ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+    };
+}
+
 // Compile-only: returns diagnostics without executing code
 static ExecuteResponse CompileCode(string code, int timeoutMs)
 {
     var sw = System.Diagnostics.Stopwatch.StartNew();
+
+    var securityResponse = ValidateSecurity(code, sw);
+    if (securityResponse != null)
+    {
+        return securityResponse;
+    }
 
     try
     {
@@ -144,6 +167,12 @@ static async Task<ExecuteResponse> ExecuteCode(string code, int timeoutMs)
     var sw = System.Diagnostics.Stopwatch.StartNew();
     var output = new StringBuilder();
     var errors = new StringBuilder();
+
+    var securityResponse = ValidateSecurity(code, sw);
+    if (securityResponse != null)
+    {
+        return securityResponse;
+    }
 
     try
     {
