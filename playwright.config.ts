@@ -8,11 +8,12 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL: "http://localhost:5173",
-    viewport: { width: 800, height: 720 },
+    viewport: { width: 1280, height: 800 },
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: "on",
   },
+  outputDir: "test-results",
   webServer: [
     {
       command: "bun run dev",
