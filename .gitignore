@@ -10,3 +10,7 @@ test-results/
 roslyn-runner/bin/
 roslyn-runner/obj/
 .fake
+
+# Local editor/agent configs
+.vscode/
+.claude/
