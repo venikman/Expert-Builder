@@ -75,22 +75,32 @@ static void SendResponse(ExecuteResponse response)
     Console.Out.Flush();
 }
 
+static ExecuteResponse? ValidateSecurity(string code, System.Diagnostics.Stopwatch sw)
+{
+    var (isValid, securityError) = SecurityValidator.Validate(code);
+    if (isValid)
+    {
+        return null;
+    }
+
+    return new ExecuteResponse
+    {
+        Success = false,
+        Error = securityError,
+        Diagnostics = [securityError!],
+        ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+    };
+}
+
 // Compile-only: returns diagnostics without executing code
 static ExecuteResponse CompileCode(string code, int timeoutMs)
 {
     var sw = System.Diagnostics.Stopwatch.StartNew();
 
-    // Security check first
-    var (isValid, securityError) = SecurityValidator.Validate(code);
-    if (!isValid)
+    var securityResponse = ValidateSecurity(code, sw);
+    if (securityResponse != null)
     {
-        return new ExecuteResponse
-        {
-            Success = false,
-            Error = securityError,
-            Diagnostics = [securityError!],
-            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
-        };
+        return securityResponse;
     }
 
     try
@@ -158,17 +168,10 @@ static async Task<ExecuteResponse> ExecuteCode(string code, int timeoutMs)
     var output = new StringBuilder();
     var errors = new StringBuilder();
 
-    // Security check first
-    var (isValid, securityError) = SecurityValidator.Validate(code);
-    if (!isValid)
+    var securityResponse = ValidateSecurity(code, sw);
+    if (securityResponse != null)
     {
-        return new ExecuteResponse
-        {
-            Success = false,
-            Error = securityError,
-            Diagnostics = [securityError!],
-            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
-        };
+        return securityResponse;
     }
 
     try

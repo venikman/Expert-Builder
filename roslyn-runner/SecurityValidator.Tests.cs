@@ -1,8 +1,6 @@
 // Security Validator Tests
 // Run with: dotnet test roslyn-runner/SecurityValidator.Tests.csproj
 
-using System.Text.RegularExpressions;
-
 namespace RoslynRunner.Tests;
 
 // Inline test runner (no external test framework needed)
@@ -23,6 +21,13 @@ public static class SecurityTests
             var code = @"var content = File.ReadAllText(""secret.txt"");";
             var (isValid, error) = SecurityValidator.Validate(code);
             Assert(!isValid && error!.Contains("File system"), $"Should block File.ReadAllText: {error}");
+        }, ref passed, ref failed);
+
+        Test("Blocks File.Open", () =>
+        {
+            var code = @"using var fs = File.Open(""secret.txt"", FileMode.Open);";
+            var (isValid, error) = SecurityValidator.Validate(code);
+            Assert(!isValid && error!.Contains("File system"), $"Should block File.Open: {error}");
         }, ref passed, ref failed);
 
         Test("Blocks Directory.GetFiles", () =>
@@ -249,81 +254,5 @@ var dict = new Dictionary<string, int> { [""a""] = 1 };";
     static void Assert(bool condition, string message)
     {
         if (!condition) throw new Exception(message);
-    }
-}
-
-// Copy of SecurityValidator for testing
-static class SecurityValidator
-{
-    private static readonly string[] FileSystemPatterns = [
-        @"\bFile\s*\.",
-        @"\bDirectory\s*\.",
-        @"\bPath\s*\.",
-        @"\bFileInfo\b",
-        @"\bDirectoryInfo\b",
-        @"\bStreamReader\b",
-        @"\bStreamWriter\b",
-        @"\bFileStream\b",
-        @"\bSystem\.IO\b",
-        @"\bEnvironment\.GetFolderPath\b",
-        @"\bEnvironment\.CurrentDirectory\b",
-    ];
-
-    private static readonly string[] NetworkPatterns = [
-        @"\bHttpClient\b",
-        @"\bWebClient\b",
-        @"\bWebRequest\b",
-        @"\bHttpWebRequest\b",
-        @"\bSocket\b",
-        @"\bTcpClient\b",
-        @"\bTcpListener\b",
-        @"\bUdpClient\b",
-        @"\bSystem\.Net\b",
-        @"\bDns\s*\.",
-    ];
-
-    private static readonly string[] ProcessPatterns = [
-        @"\bProcess\s*\.",
-        @"\bProcess\.Start\b",
-        @"\bProcessStartInfo\b",
-        @"\bSystem\.Diagnostics\.Process\b",
-    ];
-
-    private static readonly string[] ReflectionPatterns = [
-        @"\bAssembly\.Load",
-        @"\bAssembly\.LoadFrom\b",
-        @"\bAssembly\.LoadFile\b",
-        @"\bActivator\.CreateInstance\b",
-        @"\bType\.GetType\b",
-        @"\bAppDomain\b",
-    ];
-
-    private static readonly string[] EnvironmentPatterns = [
-        @"\bEnvironment\.GetEnvironmentVariable\b",
-        @"\bEnvironment\.SetEnvironmentVariable\b",
-        @"\bEnvironment\.GetEnvironmentVariables\b",
-        @"\bRegistry\b",
-    ];
-
-    public static (bool IsValid, string? Error) Validate(string code)
-    {
-        var violations = new List<string>();
-
-        foreach (var pattern in FileSystemPatterns)
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase)) { violations.Add("File system access is not allowed"); break; }
-
-        foreach (var pattern in NetworkPatterns)
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase)) { violations.Add("Network access is not allowed"); break; }
-
-        foreach (var pattern in ProcessPatterns)
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase)) { violations.Add("Process spawning is not allowed"); break; }
-
-        foreach (var pattern in ReflectionPatterns)
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase)) { violations.Add("Dynamic assembly loading is not allowed"); break; }
-
-        foreach (var pattern in EnvironmentPatterns)
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase)) { violations.Add("Environment variable access is not allowed"); break; }
-
-        return violations.Count > 0 ? (false, $"Security violation: {string.Join("; ", violations)}") : (true, null);
     }
 }
