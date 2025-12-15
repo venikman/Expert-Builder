@@ -31,7 +31,12 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { browserName: "chromium" },
+      use: {
+        browserName: "chromium",
+        launchOptions: {
+          args: ["--remote-debugging-port=9222"],
+        },
+      },
     },
   ],
 });
