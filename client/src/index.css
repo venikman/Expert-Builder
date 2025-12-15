@@ -346,8 +346,25 @@ pre, code {
   text-shadow: 0 0 1px hsl(0 0% 100% / 0.1);
 }
 
-/* Smooth transitions for theme switching */
-* {
+/* Smooth transitions for theme switching - scoped to specific elements */
+body,
+header,
+main,
+aside,
+nav,
+.card,
+.badge,
+button,
+[role="button"],
+input,
+textarea,
+select,
+.bg-background,
+.bg-card,
+.bg-muted,
+.bg-primary,
+.bg-secondary,
+.bg-accent {
   transition-property: background-color, border-color, color, fill, stroke;
   transition-timing-function: ease-out;
   transition-duration: 150ms;

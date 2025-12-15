@@ -114,6 +114,7 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
               className="h-6 w-6 p-0"
               onClick={() => setIsCollapsed(false)}
               aria-label="Expand header"
+              aria-expanded="false"
             >
               <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
@@ -273,6 +274,7 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
               className="h-7 w-7 p-0"
               onClick={() => setIsCollapsed(true)}
               aria-label="Collapse header"
+              aria-expanded="true"
             >
               <ChevronUp className="h-4 w-4" aria-hidden="true" />
             </Button>

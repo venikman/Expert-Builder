@@ -49,7 +49,7 @@ static class SecurityValidator
         @"\bAssembly\.LoadFrom\b",
         @"\bAssembly\.LoadFile\b",
         @"\bActivator\.CreateInstance\b",
-        @"\bType\.GetType\s*\(\s*""",
+        @"\bType\.GetType\b",
         @"\bAppDomain\b",
     ];
 
@@ -61,65 +61,41 @@ static class SecurityValidator
         @"\bRegistry\b",
     ];
 
+    // Category definitions for cleaner validation
+    private static readonly (string[] Patterns, string Message)[] SecurityCategories = [
+        (FileSystemPatterns, "File system access is not allowed"),
+        (NetworkPatterns, "Network access is not allowed"),
+        (ProcessPatterns, "Process spawning is not allowed"),
+        (ReflectionPatterns, "Dynamic assembly loading is not allowed"),
+        (EnvironmentPatterns, "Environment variable access is not allowed"),
+    ];
+
     public static (bool IsValid, string? Error) Validate(string code)
     {
         var violations = new List<string>();
 
-        // Check file system access
-        foreach (var pattern in FileSystemPatterns)
+        foreach (var (patterns, message) in SecurityCategories)
         {
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase))
+            if (MatchesAnyPattern(code, patterns))
             {
-                violations.Add("File system access is not allowed");
-                break;
+                violations.Add(message);
             }
         }
 
-        // Check network access
-        foreach (var pattern in NetworkPatterns)
+        return violations.Count > 0
+            ? (false, $"Security violation: {string.Join("; ", violations)}")
+            : (true, null);
+    }
+
+    private static bool MatchesAnyPattern(string code, string[] patterns)
+    {
+        foreach (var pattern in patterns)
         {
             if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase))
             {
-                violations.Add("Network access is not allowed");
-                break;
+                return true;
             }
         }
-
-        // Check process spawning
-        foreach (var pattern in ProcessPatterns)
-        {
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase))
-            {
-                violations.Add("Process spawning is not allowed");
-                break;
-            }
-        }
-
-        // Check reflection attacks
-        foreach (var pattern in ReflectionPatterns)
-        {
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase))
-            {
-                violations.Add("Dynamic assembly loading is not allowed");
-                break;
-            }
-        }
-
-        // Check environment access
-        foreach (var pattern in EnvironmentPatterns)
-        {
-            if (Regex.IsMatch(code, pattern, RegexOptions.IgnoreCase))
-            {
-                violations.Add("Environment variable access is not allowed");
-                break;
-            }
-        }
-
-        if (violations.Count > 0)
-        {
-            return (false, $"Security violation: {string.Join("; ", violations)}");
-        }
-
-        return (true, null);
+        return false;
     }
 }
