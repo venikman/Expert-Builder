@@ -6,16 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Lesson } from "@shared/schema";
 
+const codeBackground = "#171717";
+
 // Custom theme matching editor colors
 const codeTheme = {
   ...oneDark,
   'pre[class*="language-"]': {
     ...oneDark['pre[class*="language-"]'],
-    background: "#171717", // matches editor background
+    background: codeBackground, // matches editor background
   },
   'code[class*="language-"]': {
     ...oneDark['code[class*="language-"]'],
-    background: "#171717",
+    background: codeBackground,
   },
 };
 
@@ -56,7 +58,8 @@ export function LessonContent({ lesson }: LessonContentProps) {
                 if (isInline) {
                   return (
                     <code
-                      className="px-2 py-1 rounded-md bg-[#171717] text-sm font-mono text-[#e5c07b]"
+                      className="px-2 py-1 rounded-md text-sm font-mono text-[#e5c07b]"
+                      style={{ backgroundColor: codeBackground }}
                       {...props}
                     >
                       {children}
