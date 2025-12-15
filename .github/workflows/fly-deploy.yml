@@ -35,5 +35,5 @@ jobs:
       - name: Run k6 performance tests
         uses: grafana/run-k6-action@v1
         with:
-          path: scripts/k6-perf-test.js
+          path: tools/perf/k6-perf-test.js
           flags: --env BASE_URL=https://expert-builder.fly.dev
