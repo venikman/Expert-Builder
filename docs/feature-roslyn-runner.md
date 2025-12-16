@@ -129,7 +129,7 @@ Users experience 14+ second delays when running or submitting C# code in lessons
 
 #### 1. Roslyn Runner (`roslyn-runner/`)
 
-A .NET 9 console application that:
+A .NET 10 console application that:
 - Initializes Roslyn Scripting API on startup
 - Listens for JSON requests on stdin
 - Executes C# code using `CSharpScript.Create().RunAsync()`

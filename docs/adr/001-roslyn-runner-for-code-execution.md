@@ -51,7 +51,7 @@ Implement a **persistent Roslyn Scripting API runner** as a background service t
 ```
 ┌─────────────────┐      JSON/stdin       ┌──────────────────┐
 │   Bun Server    │ ──────────────────►   │  Roslyn Runner   │
-│  (grading.ts)   │ ◄──────────────────   │   (.NET 9 App)   │
+│  (grading.ts)   │ ◄──────────────────   │  (.NET 10 App)   │
 └─────────────────┘      JSON/stdout      └──────────────────┘
                                                    │
                                                    ▼
@@ -133,7 +133,7 @@ For class-based code, the runner appends a call to invoke `Main()`:
 - Still incurs per-execution compilation overhead
 - Less control over execution context
 
-**Note**: We use .NET 9 as the runtime and leverage Roslyn Scripting API for persistent warm execution rather than `dotnet run app.cs` per-request.
+**Note**: We use .NET 10 as the runtime and leverage Roslyn Scripting API for persistent warm execution rather than `dotnet run app.cs` per-request.
 
 ### 4. WebAssembly (Blazor)
 
@@ -171,7 +171,7 @@ For class-based code, the runner appends a call to invoke `Main()`:
 ### Files Added/Modified
 
 - `roslyn-runner/Program.cs` - Roslyn runner application
-- `roslyn-runner/RoslynRunner.csproj` - .NET 9 project file
+- `roslyn-runner/RoslynRunner.csproj` - .NET 10 project file
 - `server/grading.ts` - Updated to use runner via stdin/stdout
 - `Dockerfile` - Build and include Roslyn runner
 
