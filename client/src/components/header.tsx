@@ -170,7 +170,7 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
               </div>
             </button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogContent className="max-w-4xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Lesson Progress</DialogTitle>
               <DialogDescription>
