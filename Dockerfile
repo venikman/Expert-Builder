@@ -16,8 +16,8 @@ COPY . .
 # Build the application
 RUN bun run build
 
-# Stage 2: Production with .NET 9 SDK and Bun
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS production
+# Stage 2: Production with .NET 10 SDK and Bun
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS production
 
 # Install Bun
 RUN apt-get update && apt-get install -y curl unzip \

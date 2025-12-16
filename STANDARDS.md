@@ -92,7 +92,7 @@ clearTimeout(timeoutId);
 
 - Keep implementation details consistent with documentation
 - Update ADRs when implementation changes
-- Include accurate version numbers (e.g., .NET 9)
+- Include accurate version numbers (e.g., .NET 10)
 
 ## Testing Standards
 

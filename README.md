@@ -28,7 +28,7 @@ An auto-graded learning platform for modern C# with a focus on functional progra
 - **Frontend**: React 19.2 (client-only SPA), TypeScript, TailwindCSS v4, Rsbuild
 - **Code Editor**: Monaco Editor with custom C# completions
 - **Backend**: Hono (TypeScript)
-- **Runtime**: Bun + .NET 9 (Roslyn Scripting API) for C# code execution
+- **Runtime**: Bun + .NET 10 (Roslyn Scripting API) for C# code execution
 - **Testing**: Bun test
 
 ## Modern React 19 Notes
@@ -45,22 +45,22 @@ If we later adopt an RSC-capable framework, pin `react-server-dom-*` packages to
 ## Prerequisites
 
 - Bun 1.0+
-- .NET SDK 9.0+
+- .NET SDK 10.0+
 
-### Installing .NET 9 SDK
+### Installing .NET 10 SDK
 
-The RoslynRunner targets `net9.0`. On Ubuntu 22.04:
+The RoslynRunner targets `net10.0`. On Ubuntu 22.04:
 
 ```bash
 wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O /tmp/msprod.deb
 sudo dpkg -i /tmp/msprod.deb
 sudo apt update
-sudo apt install -y dotnet-sdk-9.0
+sudo apt install -y dotnet-sdk-10.0
 ```
 
 The repo includes a `global.json` that pins the SDK version to ensure CI/CLI picks the correct one.
 
-> **Note:** If your environment only offers .NET 8, you can temporarily retarget the runner to `net8.0` in `roslyn-runner/RoslynRunner.csproj`. However, installing SDK 9 is preferred to stay aligned with the ADR.
+> **Note:** If your environment only offers an older .NET SDK, you can temporarily retarget the runner to `net8.0` in `roslyn-runner/RoslynRunner.csproj`. Installing SDK 10 is preferred to stay aligned with the ADR.
 
 ## Setup
 
@@ -172,7 +172,7 @@ Each lesson includes:
   ```
 - Container caching: On.  
 - Optional env var to use the prebuilt runner:  
-  `ROSLYN_RUNNER_PATH=/workspace/Expert-Builder/roslyn-runner/bin/Release/net9.0/roslyn-runner`
+  `ROSLYN_RUNNER_PATH=/workspace/Expert-Builder/roslyn-runner/bin/Release/net10.0/RoslynRunner`
 
 ## License
 
