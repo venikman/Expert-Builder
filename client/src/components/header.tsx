@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { readLessonProgress } from "@/lib/progress";
+import { cn } from "@/lib/utils";
 import type { Lesson } from "@shared/schema";
 
 // Upcoming patterns from Ploeh blog research - DI & FP patterns for .NET
@@ -121,79 +122,83 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
               </div>
             </button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>Lesson Progress</DialogTitle>
               <DialogDescription>
                 Completed {completedCount} of {lessons.length} lessons
               </DialogDescription>
             </DialogHeader>
-            <ul className="space-y-2" role="list" aria-label="Lessons">
-              {lessons.map((lesson, index) => {
-                const completed = progress[lesson.id]?.completed;
-                const isCurrent = index === currentLessonIndex;
-                return (
-                  <li key={lesson.id} role="listitem">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onLessonChange(index);
-                        setIsProgressOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between gap-3 rounded-md border p-3 text-left hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                      aria-label={`Lesson ${index + 1}: ${lesson.title}${completed ? ", completed" : ""}${isCurrent ? ", current" : ""}`}
-                      aria-current={isCurrent ? "true" : undefined}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {completed ? (
-                          <CheckCircle2 className="h-4 w-4 text-chart-5 shrink-0" aria-hidden="true" />
-                        ) : (
-                          <Circle className="h-4 w-4 text-muted-foreground/50 shrink-0" aria-hidden="true" />
-                        )}
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">
-                            {index + 1}. {lesson.title}
-                          </div>
-                          {lesson.conceptTags.length > 0 && (
-                            <div className="text-xs text-muted-foreground truncate">
-                              {lesson.conceptTags.join(", ")}
-                            </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <section>
+                <h3 className="text-sm font-medium text-muted-foreground">Lessons</h3>
+                <ul className="mt-3 grid gap-2 sm:grid-cols-2" role="list" aria-label="Lessons">
+                  {lessons.map((lesson, index) => {
+                    const completed = progress[lesson.id]?.completed;
+                    const isCurrent = index === currentLessonIndex;
+                    return (
+                      <li key={lesson.id} role="listitem">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onLessonChange(index);
+                            setIsProgressOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                            isCurrent && "border-primary/60 bg-primary/5"
                           )}
+                          aria-label={`Lesson ${index + 1}: ${lesson.title}${completed ? ", completed" : ""}${isCurrent ? ", current" : ""}`}
+                          aria-current={isCurrent ? "true" : undefined}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {completed ? (
+                              <CheckCircle2 className="h-4 w-4 text-chart-5 shrink-0" aria-hidden="true" />
+                            ) : (
+                              <Circle className="h-4 w-4 text-muted-foreground/50 shrink-0" aria-hidden="true" />
+                            )}
+                            <span className="text-xs font-mono text-muted-foreground w-10 shrink-0">
+                              {index + 1}.
+                            </span>
+                            <span className="text-sm font-medium truncate">{lesson.title}</span>
+                          </div>
+                          {completed && (
+                            <Badge variant="secondary" className="font-mono text-[11px] h-5 px-2" aria-hidden="true">
+                              Done
+                            </Badge>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+
+              <section className="md:pl-6 md:border-l">
+                <h3 className="text-sm font-medium text-muted-foreground">Coming Soon</h3>
+                <ul className="mt-3 grid gap-2 sm:grid-cols-2" role="list" aria-label="Upcoming lessons">
+                  {UPCOMING_PATTERNS.map((pattern, index) => (
+                    <li
+                      key={pattern.title}
+                      role="listitem"
+                      className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2 opacity-60"
+                    >
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" aria-hidden="true" />
+                      <span className="text-xs font-mono text-muted-foreground w-10 shrink-0">
+                        {lessons.length + index + 1}.
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-muted-foreground truncate">
+                          {pattern.title}
+                        </div>
+                        <div className="text-xs text-muted-foreground/60 truncate hidden lg:block">
+                          {pattern.tags.join(", ")}
                         </div>
                       </div>
-                      {completed && (
-                        <Badge variant="secondary" className="font-mono text-label" aria-hidden="true">
-                          Done
-                        </Badge>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-
-            {/* Coming Soon section */}
-            <div className="mt-6 pt-4 border-t">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">Coming Soon</h3>
-              <ul className="space-y-1.5" role="list" aria-label="Upcoming lessons">
-                {UPCOMING_PATTERNS.map((pattern, index) => (
-                  <li
-                    key={pattern.title}
-                    role="listitem"
-                    className="flex items-center gap-3 rounded-md border border-dashed p-2.5 opacity-60"
-                  >
-                    <Lock className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-muted-foreground truncate">
-                        {lessons.length + index + 1}. {pattern.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground/60 truncate">
-                        {pattern.tags.join(", ")}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             </div>
           </DialogContent>
         </Dialog>
