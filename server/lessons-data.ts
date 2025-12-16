@@ -35,6 +35,40 @@ static int AddWithCounter(int a) {
 }
 \`\`\`
 
+### Anti-Pattern: Hidden Side Effects
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Modifying external state
+private static int _callCount = 0;
+static int Square(int n)
+{
+    _callCount++;  // Side effect! Not pure
+    return n * n;
+}
+
+// ❌ ANTI-PATTERN: Depending on external state
+private static int _multiplier = 2;
+static int Scale(int n)
+{
+    return n * _multiplier;  // Result depends on external state!
+}
+
+// ❌ ANTI-PATTERN: I/O in a "calculation" function
+static int SquareAndLog(int n)
+{
+    Console.WriteLine($"Squaring {n}");  // Side effect!
+    return n * n;
+}
+
+// ✅ CORRECT: Pure function - no side effects, deterministic
+static int Square(int n) => n * n;
+
+// ✅ CORRECT: Pass dependencies explicitly
+static int Scale(int n, int multiplier) => n * multiplier;
+\`\`\`
+
+**Why it's bad:** Impure functions are harder to test, can't be safely parallelized, and produce unpredictable results.
+
 ### Your Task
 
 Implement a pure function \`Square\` that returns the square of a number.
@@ -130,6 +164,44 @@ var result = numbers
     .ToList();
 // Result: [30, 40, 50]
 \`\`\`
+
+### Anti-Pattern: Using Loops Instead of LINQ
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Manual loops for simple transformations
+var result = new List<int>();
+foreach (var n in numbers)
+{
+    if (n % 2 == 0)
+    {
+        result.Add(n * n);
+    }
+}
+
+// ❌ ANTI-PATTERN: Nested loops for what LINQ does better
+var result = new List<int>();
+for (int i = 0; i < numbers.Count; i++)
+{
+    if (numbers[i] % 2 == 0)
+    {
+        for (int j = 0; j < 1; j++)  // Pointless complexity
+        {
+            result.Add(numbers[i] * numbers[i]);
+        }
+    }
+}
+
+// ❌ ANTI-PATTERN: Mutating source collection
+numbers.RemoveAll(n => n % 2 != 0);  // Modifies original list!
+
+// ✅ CORRECT: Declarative LINQ chain
+var result = numbers
+    .Where(n => n % 2 == 0)
+    .Select(n => n * n)
+    .ToList();
+\`\`\`
+
+**Why it's bad:** Imperative loops obscure intent, are error-prone, and harder to read. LINQ expresses *what* you want, not *how* to do it.
 
 ### Your Task
 
@@ -232,6 +304,33 @@ static Func<T, TResult> Compose<T, TMiddle, TResult>(
     return x => f(g(x));
 }
 \`\`\`
+
+### Anti-Pattern: Deeply Nested Function Calls
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Deeply nested calls are hard to read
+var result = Format(Validate(Transform(Parse(Clean(input)))));
+
+// ❌ ANTI-PATTERN: Intermediate variables for everything
+var cleaned = Clean(input);
+var parsed = Parse(cleaned);
+var transformed = Transform(parsed);
+var validated = Validate(transformed);
+var result = Format(validated);  // 5 lines for 1 operation!
+
+// ❌ ANTI-PATTERN: Wrong composition order
+Func<int, int> composed = x => g(f(x));  // Applies f first, then g!
+// Compose(f, g)(x) should be f(g(x)), not g(f(x))
+
+// ✅ CORRECT: Use composition to build readable pipelines
+var pipeline = Compose(Format, Compose(Validate, Compose(Transform, Compose(Parse, Clean))));
+var result = pipeline(input);
+
+// ✅ CORRECT: Or use extension method for pipe operator style
+var result = input.Pipe(Clean).Pipe(Parse).Pipe(Transform).Pipe(Validate).Pipe(Format);
+\`\`\`
+
+**Why it's bad:** Nested calls are read inside-out. Getting composition order wrong produces subtle bugs. Intermediate variables add noise.
 
 ### Your Task
 
@@ -339,6 +438,50 @@ var result = TryGetUserName(1) switch
     None<string> => "User not found"
 };
 \`\`\`
+
+### Anti-Pattern: Null-Based Error Handling
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Returning null for "not found"
+User? GetUser(int id)
+{
+    if (id < 0) return null;  // Caller might forget to check!
+    return _users.Find(u => u.Id == id);
+}
+var user = GetUser(-1);
+Console.WriteLine(user.Name);  // NullReferenceException!
+
+// ❌ ANTI-PATTERN: Using exceptions for expected cases
+int Divide(int a, int b)
+{
+    if (b == 0) throw new DivideByZeroException();  // Expensive!
+    return a / b;
+}
+
+// ❌ ANTI-PATTERN: Magic values instead of Option
+int FindIndex(string[] arr, string item)
+{
+    // Returns -1 for "not found" - easy to forget to check!
+    return Array.IndexOf(arr, item);
+}
+
+// ✅ CORRECT: Use Option to make absence explicit
+Option<User> GetUser(int id)
+{
+    if (id < 0) return new None<User>();
+    var user = _users.Find(u => u.Id == id);
+    return user != null ? new Some<User>(user) : new None<User>();
+}
+
+// ✅ CORRECT: Pattern match to handle both cases
+var greeting = GetUser(id) switch
+{
+    Some<User>(var u) => $"Hello, {u.Name}!",
+    None<User> => "User not found"
+};
+\`\`\`
+
+**Why it's bad:** Null causes runtime exceptions. Exceptions for expected cases are slow and unclear. Magic values are easy to miss.
 
 ### Your Task
 
@@ -461,6 +604,41 @@ var max = numbers.Aggregate((acc, n) => n > acc ? n : acc);
 var words = new List<string> { "Hello", "World" };
 var sentence = words.Aggregate((acc, w) => acc + " " + w);
 \`\`\`
+
+### Anti-Pattern: Wrong Seed Values and Missing Empty Case
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Wrong seed for product (0 makes everything 0!)
+var product = numbers.Aggregate(0, (acc, n) => acc * n);  // Always returns 0!
+
+// ❌ ANTI-PATTERN: No seed + empty list = exception
+var sum = new List<int>().Aggregate((acc, n) => acc + n);
+// Throws InvalidOperationException: Sequence contains no elements
+
+// ❌ ANTI-PATTERN: Using Aggregate for simple operations
+var sum = numbers.Aggregate(0, (acc, n) => acc + n);  // Overkill!
+
+// ❌ ANTI-PATTERN: Mutating accumulator object
+var result = items.Aggregate(new List<int>(), (list, item) =>
+{
+    list.Add(item * 2);  // Mutating the accumulator!
+    return list;
+});
+
+// ✅ CORRECT: Use identity element as seed (1 for multiplication)
+var product = numbers.Aggregate(1, (acc, n) => acc * n);
+
+// ✅ CORRECT: Use built-in methods for simple cases
+var sum = numbers.Sum();
+var product = numbers.Aggregate(1, (acc, n) => acc * n);
+
+// ✅ CORRECT: Create new objects in accumulator
+var result = items.Aggregate(
+    ImmutableList<int>.Empty,
+    (list, item) => list.Add(item * 2));  // Returns new list
+\`\`\`
+
+**Why it's bad:** Wrong seed values produce wrong results. Missing empty case handling crashes. Mutating accumulators breaks functional principles.
 
 ### Your Task
 
