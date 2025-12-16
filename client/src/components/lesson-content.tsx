@@ -34,6 +34,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
             mode="static"
             shikiTheme={["github-light", "github-dark"]}
             className="streamdown-content"
+            remarkRehypeOptions={{ allowDangerousHtml: false }}
           >
             {lesson.description}
           </Streamdown>

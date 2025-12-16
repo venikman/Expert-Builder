@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { initLocalStorage } from "./utils/storage";
 
 const pureFunctionsSolution = `using System;
 
@@ -19,10 +20,9 @@ const ctrlOrCmd = isMacOS ? "Meta" : "Control";
 
 test.describe("keyboard shortcuts", () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(({ solution }) => {
-      localStorage.clear();
-      localStorage.setItem("code-pure-functions", solution);
-    }, { solution: pureFunctionsSolution });
+    await initLocalStorage(page, {
+      items: { "code-pure-functions": pureFunctionsSolution },
+    });
 
     await page.goto("/");
     await expect(page.getByTestId("text-app-title")).toHaveText("FP C# Academy");

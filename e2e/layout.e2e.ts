@@ -1,14 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { initLocalStorage } from "./utils/storage";
 
 test.use({ viewport: { width: 1366, height: 900 } });
 
 test("desktop layout shows code left and lesson right", async ({ page }) => {
-  await page.addInitScript(() => {
-    const initKey = "__expert_builder_e2e_inited";
-    if (localStorage.getItem(initKey)) return;
-    localStorage.clear();
-    localStorage.setItem(initKey, "1");
-  });
+  await initLocalStorage(page, { onceKey: "__expert_builder_e2e_inited" });
 
   await page.goto("/");
   await expect(page.getByTestId("text-app-title")).toHaveText("FP C# Academy");

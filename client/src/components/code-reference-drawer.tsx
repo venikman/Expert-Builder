@@ -9,9 +9,12 @@ import {
 } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Copy, Check, Code2 } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { track } from "@/lib/analytics";
 import type { CodeExample } from "@shared/schema";
+
+// Fixed snap points: 200px (peek), 400px (comfortable), expanded
+const snapPoints = [0.25, 0.5, 0.85];
 
 interface CodeReferenceDrawerProps {
   open: boolean;
@@ -29,6 +32,19 @@ export function CodeReferenceDrawer({
   lessonTitle,
 }: CodeReferenceDrawerProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [activeSnapPoint, setActiveSnapPoint] = useState<number | string | null>(
+    snapPoints[1]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const copyToClipboard = useCallback(async (code: string, index: number) => {
     try {
@@ -40,8 +56,11 @@ export function CodeReferenceDrawer({
         example_title: example?.title,
         language: example?.language,
       });
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
       setCopiedIndex(index);
-      setTimeout(() => setCopiedIndex(null), 2000);
+      timeoutRef.current = setTimeout(() => setCopiedIndex(null), 2000);
     } catch (err) {
       track("code_example_copy_failed", {
         lesson_id: lessonId,
@@ -50,9 +69,6 @@ export function CodeReferenceDrawer({
       console.error("Failed to copy:", err);
     }
   }, [codeExamples, lessonId]);
-
-  // Fixed snap points: 200px (peek), 400px (comfortable), expanded
-  const snapPoints = [0.25, 0.5, 0.85];
 
   if (codeExamples.length === 0) {
     return null;
@@ -63,8 +79,8 @@ export function CodeReferenceDrawer({
       open={open}
       onOpenChange={onOpenChange}
       snapPoints={snapPoints}
-      activeSnapPoint={snapPoints[1]}
-      setActiveSnapPoint={() => {}}
+      activeSnapPoint={activeSnapPoint}
+      setActiveSnapPoint={setActiveSnapPoint}
     >
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader className="flex flex-row items-center justify-between border-b pb-4">
@@ -116,6 +132,7 @@ export function CodeReferenceDrawer({
                     mode="static"
                     shikiTheme={["github-light", "github-dark"]}
                     controls={{ code: false }}
+                    remarkRehypeOptions={{ allowDangerousHtml: false }}
                   >
                     {`\`\`\`${example.language}\n${example.code}\n\`\`\``}
                   </Streamdown>
