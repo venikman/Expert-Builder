@@ -37,6 +37,10 @@ export async function startRunner(): Promise<void> {
     } else {
       console.log(`[Runner] Starting Roslyn runner via dotnet run (dev mode)`);
       runnerProcess = spawn("dotnet", ["run", "--project", "./roslyn-runner/RoslynRunner.csproj", "--configuration", "Release"], {
+        env: {
+          ...process.env,
+          MSBuildEnableWorkloadResolver: "false"
+        },
         stdio: ["pipe", "pipe", "pipe"]
       });
     }
