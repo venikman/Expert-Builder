@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { LessonPage } from "@/components/lesson-page";
 import { Skeleton } from "@/components/ui/skeleton";
+import { track } from "@/lib/analytics";
 import type { Lesson } from "@shared/schema";
 
 export function HomeSkeleton() {
@@ -39,11 +40,19 @@ export default function Home() {
 
   const currentLesson = lessons[currentLessonIndex];
 
-  const handleLessonChange = (index: number) => {
+  useEffect(() => {
+    if (!currentLesson) return;
+    track("lesson_viewed", {
+      lesson_id: currentLesson.id,
+      lesson_order: currentLesson.order,
+    });
+  }, [currentLesson?.id]);
+
+  const handleLessonChange = useCallback((index: number) => {
     if (index >= 0 && index < lessons.length) {
       setCurrentLessonIndex(index);
     }
-  };
+  }, [lessons.length]);
 
   return (
     <div className="h-screen flex flex-col bg-background max-w-screen-2xl mx-auto">

@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { registerCSharpCompletions } from "@/lib/csharp-completions";
 import { apiRequest } from "@/lib/queryClient";
+import { track } from "@/lib/analytics";
 import type { editor } from "monaco-editor";
 import type { Diagnostic } from "@shared/schema";
 import { isCodeError } from "@shared/schema";
@@ -67,6 +68,10 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const [diagnosticsCount, setDiagnosticsCount] = useState(0);
+  const previousDiagnosticsCountRef = useRef<number | null>(null);
+  const lessonIdRef = useRef<string | undefined>(lessonId);
+  const onRunRef = useRef(onRun);
+  const onSubmitRef = useRef(onSubmit);
 
   // Font size state
   const [fontSize, setFontSize] = useState(() => {
@@ -86,6 +91,18 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   });
   const vimModeRef = useRef<{ dispose: () => void } | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    lessonIdRef.current = lessonId;
+  }, [lessonId]);
+
+  useEffect(() => {
+    onRunRef.current = onRun;
+  }, [onRun]);
+
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  }, [onSubmit]);
 
   // Expose goToLine method via ref
   useImperativeHandle(ref, () => ({
@@ -333,7 +350,8 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
       label: "Run Code",
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
       run: () => {
-        onRun();
+        track("code_run_initiated", { source: "keyboard", lesson_id: lessonIdRef.current });
+        onRunRef.current();
       },
     });
 
@@ -345,10 +363,11 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
       ],
       run: () => {
-        onSubmit();
+        track("code_submit_initiated", { source: "keyboard", lesson_id: lessonIdRef.current });
+        onSubmitRef.current();
       },
     });
-  }, [onRun, onSubmit]);
+  }, []);
 
   const handleEditorChange = useCallback((value: string | undefined) => {
     const newCode = value || "";
@@ -392,13 +411,24 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   }, [vimEnabled, isEditorReady]);
 
   const toggleVimMode = () => {
-    setVimEnabled((prev) => !prev);
+    setVimEnabled((prev) => {
+      const next = !prev;
+      track("editor_vim_toggled", { enabled: next, lesson_id: lessonId });
+      return next;
+    });
   };
 
   // Font size handlers
   const increaseFontSize = () => {
     setFontSize((prev) => {
       const newSize = Math.min(prev + 2, MAX_FONT_SIZE);
+      if (newSize !== prev) {
+        track("editor_font_size_changed", {
+          direction: "increase",
+          font_size: newSize,
+          lesson_id: lessonId,
+        });
+      }
       localStorage.setItem("editor-font-size", String(newSize));
       editorRef.current?.updateOptions({ fontSize: newSize });
       return newSize;
@@ -408,6 +438,13 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   const decreaseFontSize = () => {
     setFontSize((prev) => {
       const newSize = Math.max(prev - 2, MIN_FONT_SIZE);
+      if (newSize !== prev) {
+        track("editor_font_size_changed", {
+          direction: "decrease",
+          font_size: newSize,
+          lesson_id: lessonId,
+        });
+      }
       localStorage.setItem("editor-font-size", String(newSize));
       editorRef.current?.updateOptions({ fontSize: newSize });
       return newSize;
@@ -417,11 +454,30 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   // Reset code to skeleton
   const handleReset = () => {
     if (skeleton && code !== skeleton) {
+      track("code_reset", { lesson_id: lessonId });
       onCodeChange(skeleton);
     }
   };
 
   const hasChanges = skeleton && code !== skeleton;
+
+  useEffect(() => {
+    if (!lessonId) return;
+
+    const previous = previousDiagnosticsCountRef.current;
+    if (previous === null) {
+      previousDiagnosticsCountRef.current = diagnosticsCount;
+      return;
+    }
+
+    if (previous === 0 && diagnosticsCount > 0) {
+      track("diagnostics_errors_present", { lesson_id: lessonId, error_count: diagnosticsCount });
+    } else if (previous > 0 && diagnosticsCount === 0) {
+      track("diagnostics_errors_cleared", { lesson_id: lessonId });
+    }
+
+    previousDiagnosticsCountRef.current = diagnosticsCount;
+  }, [diagnosticsCount, lessonId]);
 
   return (
     <div className="h-full flex flex-col">
@@ -513,7 +569,10 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
           <Button
             variant="secondary"
             size="sm"
-            onClick={onRun}
+            onClick={() => {
+              track("code_run_initiated", { source: "button", lesson_id: lessonId });
+              onRun();
+            }}
             disabled={isRunning || isSubmitting}
             data-testid="button-run-code"
           >
@@ -531,7 +590,10 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
           </Button>
           <Button
             size="sm"
-            onClick={onSubmit}
+            onClick={() => {
+              track("code_submit_initiated", { source: "button", lesson_id: lessonId });
+              onSubmit();
+            }}
             disabled={isRunning || isSubmitting}
             data-testid="button-submit-code"
           >

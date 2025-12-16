@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { initLocalStorage } from "./utils/storage";
 
 const pureFunctionsSolution = `using System;
 
@@ -29,10 +30,9 @@ test("demo: complete lesson flow", async ({ page }) => {
   test.setTimeout(120_000);
 
   // Pre-load solution
-  await page.addInitScript(({ solution }) => {
-    localStorage.clear();
-    localStorage.setItem("code-pure-functions", solution);
-  }, { solution: pureFunctionsSolution });
+  await initLocalStorage(page, {
+    items: { "code-pure-functions": pureFunctionsSolution },
+  });
 
   await page.goto("/");
 
@@ -65,7 +65,7 @@ test("demo: complete lesson flow", async ({ page }) => {
   await page.waitForTimeout(DELAY);
 
   // Verify completion
-  await expect(page.getByText("Completed 1 of 5 lessons")).toBeVisible();
+  await expect(page.getByText(/Completed 1 of \d+ lessons/)).toBeVisible();
   await page.waitForTimeout(DELAY);
 
   // Scroll to show Coming Soon section

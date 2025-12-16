@@ -6,8 +6,10 @@ const IS_PROD = process.env.CI || process.env.PROD_TEST;
 
 test.describe("Lighthouse", () => {
   test("should meet performance thresholds", async ({ page }, testInfo) => {
-    // Only run in Chromium (Lighthouse requires it)
-    test.skip(testInfo.project.name !== "chromium", "Lighthouse only works in Chromium");
+    test.skip(
+      testInfo.project.name !== "chromium-lighthouse",
+      "Lighthouse only runs in chromium-lighthouse project"
+    );
 
     await page.goto("/");
     await expect(page.getByTestId("text-app-title")).toBeVisible();

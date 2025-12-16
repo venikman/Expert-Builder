@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Include Streamdown styles for Tailwind v4 */
+@source "../node_modules/streamdown/dist/*.js";
+
 @font-face {
   font-family: "Monaspace Argon";
   src: url("/fonts/monaspace-argon-var.woff2") format("woff2");

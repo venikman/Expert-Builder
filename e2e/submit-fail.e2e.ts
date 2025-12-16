@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { initLocalStorage } from "./utils/storage";
 
 const pureFunctionsWrongSolution = `using System;
 
@@ -17,10 +18,9 @@ test.use({ viewport: { width: 1280, height: 720 } });
 test("submit failing solution shows destructive toast and does not mark progress", async ({ page }) => {
   test.setTimeout(120_000);
 
-  await page.addInitScript(({ solution }) => {
-    localStorage.clear();
-    localStorage.setItem("code-pure-functions", solution);
-  }, { solution: pureFunctionsWrongSolution });
+  await initLocalStorage(page, {
+    items: { "code-pure-functions": pureFunctionsWrongSolution },
+  });
 
   await page.goto("/");
 
@@ -34,4 +34,3 @@ test("submit failing solution shows destructive toast and does not mark progress
   const storedProgress = JSON.parse(storedProgressRaw ?? "{}");
   expect(storedProgress["pure-functions"]?.completed).not.toBe(true);
 });
-

@@ -33,6 +33,15 @@ export default defineConfig({
       name: "chromium",
       use: {
         browserName: "chromium",
+      },
+      testIgnore: ["**/lighthouse.e2e.ts"],
+    },
+    {
+      name: "chromium-lighthouse",
+      testMatch: ["**/lighthouse.e2e.ts"],
+      workers: 1,
+      use: {
+        browserName: "chromium",
         launchOptions: {
           args: ["--remote-debugging-port=9222"],
         },

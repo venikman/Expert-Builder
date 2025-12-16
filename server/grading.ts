@@ -1,6 +1,7 @@
 import { spawn, ChildProcess } from "child_process";
 import { createInterface, Interface } from "readline";
 import type { SubmissionResult, TestResult, Diagnostic } from "@shared/schema";
+import { trackServerEvent } from "./analytics";
 
 // Roslyn Runner singleton
 let runnerProcess: ChildProcess | null = null;
@@ -25,6 +26,8 @@ export async function startRunner(): Promise<void> {
 
   return new Promise((resolve, reject) => {
     const runnerPath = process.env.ROSLYN_RUNNER_PATH;
+    const startedAt = Date.now();
+    const mode = runnerPath ? "binary" : "dotnet_run";
     let startupTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     // In production, use the pre-built executable
@@ -45,6 +48,12 @@ export async function startRunner(): Promise<void> {
       });
     }
 
+    trackServerEvent("roslyn_runner_started", "server", {
+      mode,
+      pid: runnerProcess.pid,
+      has_runner_path: Boolean(runnerPath),
+    });
+
     runnerReadline = createInterface({
       input: runnerProcess.stdout!,
       crlfDelay: Infinity
@@ -58,6 +67,11 @@ export async function startRunner(): Promise<void> {
       if (line === "READY") {
         console.log("[Runner] Roslyn runner is ready");
         runnerReady = true;
+        trackServerEvent("roslyn_runner_ready", "server", {
+          mode,
+          pid: runnerProcess?.pid,
+          startup_ms: Date.now() - startedAt,
+        });
         if (startupTimeoutId) {
           clearTimeout(startupTimeoutId);
           startupTimeoutId = null;
@@ -85,6 +99,11 @@ export async function startRunner(): Promise<void> {
     runnerProcess.on("error", (err) => {
       console.error(`[Runner] Process error: ${err.message}`);
       runnerReady = false;
+      trackServerEvent("roslyn_runner_error", "server", {
+        mode,
+        pid: runnerProcess?.pid,
+        message: err.message,
+      });
       if (startupTimeoutId) {
         clearTimeout(startupTimeoutId);
         startupTimeoutId = null;
@@ -95,6 +114,10 @@ export async function startRunner(): Promise<void> {
     runnerProcess.on("exit", (code) => {
       console.log(`[Runner] Process exited with code ${code}`);
       runnerReady = false;
+      trackServerEvent("roslyn_runner_exited", "server", {
+        mode,
+        exit_code: code,
+      });
       runnerProcess = null;
       runnerReadline = null;
 
@@ -108,6 +131,10 @@ export async function startRunner(): Promise<void> {
     // Timeout for startup
     startupTimeoutId = setTimeout(() => {
       if (!runnerReady) {
+        trackServerEvent("roslyn_runner_startup_timeout", "server", {
+          mode,
+          timeout_ms: 30000,
+        });
         reject(new Error("Runner startup timeout"));
       }
     }, 30000);
@@ -133,6 +160,10 @@ async function runWithRunner(code: string, timeoutMs: number = 30000, compileOnl
     setTimeout(() => {
       if (pendingRequests.has(id)) {
         pendingRequests.delete(id);
+        trackServerEvent("roslyn_request_timeout", "server", {
+          timeout_ms: timeoutMs,
+          compile_only: compileOnly,
+        });
         reject(new Error(`Execution timeout after ${timeoutMs}ms`));
       }
     }, timeoutMs + 5000);

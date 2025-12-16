@@ -123,6 +123,33 @@ public class Exercise
       "Square(-3) should return 9": "When you multiply a negative number by itself, the result is positive!",
       "Square(0) should return 0": "Zero times zero equals zero",
     },
+    codeExamples: [
+      {
+        title: "Pure Function Example",
+        language: "csharp",
+        code: `// Pure function - always returns the same result for same input
+static int Add(int a, int b) => a + b;`,
+      },
+      {
+        title: "Impure Function (Anti-pattern)",
+        language: "csharp",
+        code: `// Impure function - depends on external state
+static int counter = 0;
+static int AddWithCounter(int a) {
+    counter++; // Side effect!
+    return a + counter;
+}`,
+      },
+      {
+        title: "Pure vs Impure Comparison",
+        language: "csharp",
+        code: `// ✅ CORRECT: Pure function - no side effects
+static int Square(int n) => n * n;
+
+// ✅ CORRECT: Pass dependencies explicitly
+static int Scale(int n, int multiplier) => n * multiplier;`,
+      },
+    ],
   },
   {
     id: "map-filter",
@@ -262,6 +289,31 @@ public class Exercise
       "Should return empty list for [1,3,5]": "When no elements match the filter, the result should be an empty list",
       "Should handle negative evens [-2,3,-4]": "Remember that negative even numbers are still even! -2 % 2 == 0",
     },
+    codeExamples: [
+      {
+        title: "Select (Map) - Transform each element",
+        language: "csharp",
+        code: `var numbers = new List<int> { 1, 2, 3, 4, 5 };
+var doubled = numbers.Select(n => n * 2).ToList();
+// Result: [2, 4, 6, 8, 10]`,
+      },
+      {
+        title: "Where (Filter) - Keep matching elements",
+        language: "csharp",
+        code: `var numbers = new List<int> { 1, 2, 3, 4, 5 };
+var evens = numbers.Where(n => n % 2 == 0).ToList();
+// Result: [2, 4]`,
+      },
+      {
+        title: "Chaining Operations",
+        language: "csharp",
+        code: `var result = numbers
+    .Where(n => n > 2)
+    .Select(n => n * 10)
+    .ToList();
+// Result: [30, 40, 50]`,
+      },
+    ],
   },
   {
     id: "function-composition",
@@ -392,6 +444,29 @@ public class Exercise
       "Compose(double, addOne)(5) = 12": "Order matters! double(addOne(5)) = double(6) = 12",
       "Compose(square, triple)(2) = 36": "triple(2) = 6, then square(6) = 36",
     },
+    codeExamples: [
+      {
+        title: "Basic Composition",
+        language: "csharp",
+        code: `Func<int, int> addOne = x => x + 1;
+Func<int, int> double_it = x => x * 2;
+
+// Compose: first double, then add one
+Func<int, int> composed = x => addOne(double_it(x));
+
+Console.WriteLine(composed(5)); // (5 * 2) + 1 = 11`,
+      },
+      {
+        title: "Generic Compose Function",
+        language: "csharp",
+        code: `static Func<T, TResult> Compose<T, TMiddle, TResult>(
+    Func<TMiddle, TResult> f,
+    Func<T, TMiddle> g)
+{
+    return x => f(g(x));
+}`,
+      },
+    ],
   },
   {
     id: "option-type",
@@ -565,6 +640,30 @@ public class Exercise
       "SafeDivide(10, 2) should return Some(5)": "When b != 0, return new Some<int>(a / b)",
       "SafeDivide(7, 3) should return Some(2)": "Integer division truncates: 7 / 3 = 2 (not 2.33...)",
     },
+    codeExamples: [
+      {
+        title: "Option Type Definition",
+        language: "csharp",
+        code: `public abstract record Option<T>;
+public record Some<T>(T Value) : Option<T>;
+public record None<T>() : Option<T>;`,
+      },
+      {
+        title: "Using Option with Pattern Matching",
+        language: "csharp",
+        code: `Option<string> TryGetUserName(int id)
+{
+    if (id == 1) return new Some<string>("Alice");
+    return new None<string>();
+}
+
+var result = TryGetUserName(1) switch
+{
+    Some<string>(var name) => $"Hello, {name}!",
+    None<string> => "User not found"
+};`,
+      },
+    ],
   },
   {
     id: "reduce-fold",
@@ -703,6 +802,27 @@ public class Exercise
       "Product([]) should return 1": "With Aggregate(1, ...), an empty list returns the seed value 1",
       "Product([1,0,5]) should return 0": "Any list containing 0 will have a product of 0",
     },
+    codeExamples: [
+      {
+        title: "Sum with Aggregate",
+        language: "csharp",
+        code: `var numbers = new List<int> { 1, 2, 3, 4, 5 };
+var sum = numbers.Aggregate(0, (acc, n) => acc + n);
+// Result: 15`,
+      },
+      {
+        title: "Product with Aggregate",
+        language: "csharp",
+        code: `var product = numbers.Aggregate(1, (acc, n) => acc * n);
+// Start with 1 (identity for multiplication)`,
+      },
+      {
+        title: "Find Maximum",
+        language: "csharp",
+        code: `var max = numbers.Aggregate((acc, n) => n > acc ? n : acc);
+// No seed - uses first element as initial value`,
+      },
+    ],
   },
 
   // ============================================
@@ -830,6 +950,29 @@ public class Exercise
       "Reverse transform works": "The delegate handles the logic - you just need to call it",
       "Empty string handled": "Delegates work the same way regardless of input value",
     },
+    codeExamples: [
+      {
+        title: "Declare and Use a Delegate",
+        language: "csharp",
+        code: `// Declare a delegate TYPE
+delegate int MathOperation(int a, int b);
+
+// Create delegate INSTANCES
+MathOperation add = (a, b) => a + b;
+MathOperation multiply = (a, b) => a * b;
+
+// Invoke them
+Console.WriteLine(add(3, 4));      // 7
+Console.WriteLine(multiply(3, 4)); // 12`,
+      },
+      {
+        title: "Method Groups",
+        language: "csharp",
+        code: `// Assign an existing method directly
+Action<string> log = Console.WriteLine;
+log("Hello!"); // Calls Console.WriteLine`,
+      },
+    ],
   },
   {
     id: "action-func-predicate",
@@ -966,6 +1109,32 @@ public class Exercise
       "Count in empty list": "An empty list should return 0 - the loop simply doesn't execute",
       "Count none matching": "When no items match, the counter stays at 0",
     },
+    codeExamples: [
+      {
+        title: "Action (no return value)",
+        language: "csharp",
+        code: `Action<string> log = msg => Console.WriteLine(msg);
+Action<int, int> printSum = (a, b) => Console.WriteLine(a + b);
+
+log("Hello");        // prints "Hello"
+printSum(3, 4);      // prints "7"`,
+      },
+      {
+        title: "Func (returns a value)",
+        language: "csharp",
+        code: `Func<int, int> square = x => x * x;
+Func<int, int, int> add = (a, b) => a + b;
+Func<string> getGreeting = () => "Hello!";`,
+      },
+      {
+        title: "Predicate (returns bool)",
+        language: "csharp",
+        code: `Predicate<int> isEven = n => n % 2 == 0;
+Predicate<string> isEmpty = s => string.IsNullOrEmpty(s);
+
+Console.WriteLine(isEven(4));     // True`,
+      },
+    ],
   },
   {
     id: "lambdas-closures",
@@ -1115,6 +1284,46 @@ public class Exercise
       "CreateMultiplier(0)(100) = 0": "The closure captures factor=0, so any input * 0 = 0",
       "CreateMultiplier(-2)(5) = -10": "Closures work with any value, including negatives",
     },
+    codeExamples: [
+      {
+        title: "Expression vs Statement Lambda",
+        language: "csharp",
+        code: `// Expression lambda (single expression)
+Func<int, int> square = x => x * x;
+
+// Statement lambda (multiple statements)
+Func<int, int> factorial = n => {
+    int result = 1;
+    for (int i = 2; i <= n; i++)
+        result *= i;
+    return result;
+};`,
+      },
+      {
+        title: "Closures: Capturing Variables",
+        language: "csharp",
+        code: `int multiplier = 3;
+Func<int, int> multiply = x => x * multiplier;
+
+Console.WriteLine(multiply(5)); // 15
+multiplier = 10;
+Console.WriteLine(multiply(5)); // 50 - uses current value!`,
+      },
+      {
+        title: "The Closure Trap (Loop Bug)",
+        language: "csharp",
+        code: `// Bug: All print 3!
+for (int i = 0; i < 3; i++)
+    actions.Add(() => Console.WriteLine(i));
+
+// Fix: Capture a copy
+for (int i = 0; i < 3; i++)
+{
+    int copy = i;
+    actions.Add(() => Console.WriteLine(copy)); // 0, 1, 2
+}`,
+      },
+    ],
   },
 
   // ============================================
@@ -1268,6 +1477,24 @@ public class Exercise
       "Callback called for each item": "Call onProgress(i, numbers[i], squared) inside the loop",
       "Empty list returns empty": "The loop doesn't execute for empty input, returning empty results",
     },
+    codeExamples: [
+      {
+        title: "Progress Reporter Pattern",
+        language: "csharp",
+        code: `void ProcessItems(List<string> items, Action<int> onProgress)
+{
+    for (int i = 0; i < items.Count; i++)
+    {
+        // Do work...
+        onProgress(i + 1); // Notify progress
+    }
+}
+
+// Usage
+ProcessItems(myItems, count => 
+    Console.WriteLine($"Processed {count} items"));`,
+      },
+    ],
   },
   {
     id: "hto-strategy",
@@ -1417,6 +1644,35 @@ public class Exercise
       "Filter none matching": "When no items match the strategy, return an empty list",
       "Filter all matching": "When all items match, return all of them",
     },
+    codeExamples: [
+      {
+        title: "Strategy Pattern with Delegates",
+        language: "csharp",
+        code: `// Instead of interfaces + classes, pass a function
+decimal CalculateTotal(decimal subtotal, Func<decimal, decimal> discountStrategy)
+{
+    var discount = discountStrategy(subtotal);
+    return subtotal - discount;
+}
+
+Func<decimal, decimal> tenPercent = amount => amount * 0.10m;
+Func<decimal, decimal> fixedFive = amount => 5m;
+
+var total1 = CalculateTotal(100m, tenPercent); // 90
+var total2 = CalculateTotal(100m, fixedFive);  // 95`,
+      },
+      {
+        title: "Validation Strategy",
+        language: "csharp",
+        code: `// Different validation strategies
+Func<string, bool> notEmpty = s => !string.IsNullOrEmpty(s);
+Func<string, bool> minLength5 = s => s.Length >= 5;
+Func<string, bool> hasDigit = s => s.Any(char.IsDigit);
+
+bool Validate(string input, Func<string, bool> strategy)
+    => strategy(input);`,
+      },
+    ],
   },
   {
     id: "hto-pipeline",
@@ -1584,6 +1840,38 @@ public class Exercise
       "Empty pipeline returns input": "With no steps, just return the identity function: s => s",
       "Order matters": "The first step in the list sees the original input and wraps all subsequent transformations",
     },
+    codeExamples: [
+      {
+        title: "Pipeline/Middleware Concept",
+        language: "csharp",
+        code: `// Each middleware component
+async Task LoggingMiddleware(Context ctx, Func<Task> next)
+{
+    Console.WriteLine("Before");
+    await next();  // Continue pipeline
+    Console.WriteLine("After");
+}`,
+      },
+      {
+        title: "Building a Pipeline",
+        language: "csharp",
+        code: `public class Pipeline
+{
+    private readonly List<Func<Action, Action>> _middlewares = new();
+
+    public void Use(Func<Action, Action> middleware)
+        => _middlewares.Add(middleware);
+
+    public Action Build()
+    {
+        Action app = () => { }; // Terminal
+        for (int i = _middlewares.Count - 1; i >= 0; i--)
+            app = _middlewares[i](app);
+        return app;
+    }
+}`,
+      },
+    ],
   },
   {
     id: "hto-linq-transform",
@@ -1742,6 +2030,39 @@ public class Exercise
       "No transforms returns original": "With no transformations, just return the items as-is",
       "Three transforms": "1 -> addOne -> 2 -> double -> 4 -> square -> 16",
     },
+    codeExamples: [
+      {
+        title: "LINQ is Pure HTO",
+        language: "csharp",
+        code: `// Every LINQ method accepts a delegate
+var evens = numbers.Where(n => n % 2 == 0);
+var squares = numbers.Select(n => n * n);
+var sorted = people.OrderBy(p => p.Age);`,
+      },
+      {
+        title: "Composing Transforms",
+        language: "csharp",
+        code: `var result = numbers
+    .Where(n => n > 0)           // Filter
+    .Select(n => n * 2)          // Transform
+    .Where(n => n < 100)         // Filter again
+    .OrderByDescending(n => n)   // Sort
+    .Take(5);                    // Limit`,
+      },
+      {
+        title: "Custom LINQ-Style Method",
+        language: "csharp",
+        code: `public static IEnumerable<T> WhereNot<T>(
+    this IEnumerable<T> source,
+    Func<T, bool> predicate)
+{
+    return source.Where(item => !predicate(item));
+}
+
+// Usage
+var odds = numbers.WhereNot(n => n % 2 == 0);`,
+      },
+    ],
   },
   {
     id: "hto-di-factory",
@@ -1946,6 +2267,28 @@ public class Exercise
       "Factory resolves logger": "Use sp.GetService<Logger>() to get the logger instance",
       "Factory is reusable": "The factory function can be called multiple times with different providers",
     },
+    codeExamples: [
+      {
+        title: "Factory Delegate in DI",
+        language: "csharp",
+        code: `services.AddSingleton<IMyService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var logger = sp.GetRequiredService<ILogger<MyService>>();
+    return new MyService(config["ApiKey"], logger);
+});`,
+      },
+      {
+        title: "Conditional Construction",
+        language: "csharp",
+        code: `services.AddSingleton<IService>(sp => {
+    var env = sp.GetRequiredService<IHostEnvironment>();
+    return env.IsDevelopment()
+        ? new DevService()
+        : new ProdService();
+});`,
+      },
+    ],
   },
   {
     id: "hto-route-handler",
@@ -2117,6 +2460,30 @@ public class Exercise
       "Route with parameter": "The handler receives routeValues and can access rv[\"id\"]",
       "Unknown route returns 404": "If the path isn't in _routes, return a 404 message",
     },
+    codeExamples: [
+      {
+        title: "Minimal API Route Handlers",
+        language: "csharp",
+        code: `app.MapGet("/hello", () => "Hello World!");
+
+app.MapGet("/users/{id}", (int id) => $"User {id}");
+
+app.MapPost("/users", (User user) => 
+    Results.Created($"/users/{user.Id}", user));`,
+      },
+      {
+        title: "Sync vs Async Handlers",
+        language: "csharp",
+        code: `// Sync - framework wraps in Task
+app.MapGet("/sync", () => "Hello");
+
+// Async - you return Task
+app.MapGet("/async", async () => {
+    await Task.Delay(100);
+    return "Hello";
+});`,
+      },
+    ],
   },
   {
     id: "hto-background",
@@ -2279,6 +2646,32 @@ public class Exercise
       "0 ticks produces empty": "The loop doesn't execute, returning an empty list",
       "Tick indices are correct": "Pass the loop variable i to onTick",
     },
+    codeExamples: [
+      {
+        title: "Timer Callback",
+        language: "csharp",
+        code: `var timer = new Timer(
+    callback: state => Console.WriteLine("Tick!"),
+    state: null,
+    dueTime: 0,
+    period: 1000);`,
+      },
+      {
+        title: "BackgroundService Pattern",
+        language: "csharp",
+        code: `public class MyWorker : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            // Do work
+            await Task.Delay(1000, ct);
+        }
+    }
+}`,
+      },
+    ],
   },
 
   // ============================================
@@ -2491,6 +2884,36 @@ public class Exercise
       "Empty pipeline works": "With no middlewares, return a function that just completes",
       "Short-circuit stops chain": "If a middleware doesn't call next(), subsequent middlewares don't run",
     },
+    codeExamples: [
+      {
+        title: "Request Pipeline Flow",
+        language: "csharp",
+        code: `// Request -> [MW1] -> [MW2] -> [MW3] -> Response
+//               ↓        ↓        ↓
+//         RequestDelegate  RequestDelegate  RequestDelegate
+
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"Request: {context.Request.Path}");
+    await next(context);
+    Console.WriteLine($"Response: {context.Response.StatusCode}");
+});`,
+      },
+      {
+        title: "Short-Circuiting",
+        language: "csharp",
+        code: `app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/health")
+    {
+        context.Response.StatusCode = 200;
+        await context.Response.WriteAsync("OK");
+        return; // Don't call next - short circuit!
+    }
+    await next(context);
+});`,
+      },
+    ],
   },
   {
     id: "middleware-perf",
@@ -2658,6 +3081,35 @@ public class Exercise
       "Good pattern: 1000 requests = 0 allocations": "The good overload reuses the RequestDelegate - no per-request allocations",
       "Good pattern scales to millions": "With 0 allocations per request, it doesn't matter how many requests",
     },
+    codeExamples: [
+      {
+        title: "Two Use Overloads",
+        language: "csharp",
+        code: `// Overload 1: Allocates per request!
+app.Use(async (context, next) =>
+{
+    await next(); // 'next' is Func<Task>
+});
+
+// Overload 2: Preferred - no per-request allocation
+app.Use(async (context, next) =>
+{
+    await next(context); // 'next' is RequestDelegate
+});`,
+      },
+      {
+        title: "ASP0016 Warning Fix",
+        language: "csharp",
+        code: `// WARNING: ASP0016 - return value discarded!
+app.MapGet("/bad", () => Task.FromResult("Hello"));
+
+// Correct: return the string directly
+app.MapGet("/good", () => "Hello");
+
+// Or use Results
+app.MapGet("/also-good", () => Results.Ok("Hello"));`,
+      },
+    ],
   },
   {
     id: "capstone-api",
@@ -2904,5 +3356,46 @@ public class Exercise
       "Route with parameter works": "Route values should be copied to context.RouteValues before handling",
       "Middleware executes": "Build the pipeline by wrapping the terminal handler with each middleware in reverse order",
     },
+    codeExamples: [
+      {
+        title: "Mini Framework Usage",
+        language: "csharp",
+        code: `var app = new MiniApp();
+
+// Register services (HTO-5: DI Factory)
+app.Services.Add<ILogger>(() => new ConsoleLogger());
+
+// Add middleware (HTO-3: Pipeline)
+app.Use(async (ctx, next) => {
+    Console.WriteLine($"Request: {ctx.Path}");
+    await next();
+});
+
+// Map routes (HTO-4: Route Handler)
+app.MapGet("/hello", () => "Hello World!");
+app.MapGet("/users/{id}", (int id) => $"User {id}");`,
+      },
+      {
+        title: "Building the Pipeline",
+        language: "csharp",
+        code: `// Terminal is the route handler
+Func<Task> terminal = () => {
+    if (_routes.TryGetValue(path, out var handler))
+        context.Response = handler(context);
+    else
+        context.Response = "404 Not Found";
+    return Task.CompletedTask;
+};
+
+// Wrap with middleware (reverse order)
+var next = terminal;
+for (int i = _middleware.Count - 1; i >= 0; i--)
+{
+    var mw = _middleware[i];
+    var currentNext = next;
+    next = () => mw(context, currentNext);
+}`,
+      },
+    ],
   },
 ];
