@@ -15,7 +15,8 @@
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
     "pw:install": "playwright install",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project chromium",
+    "test:e2e:lighthouse": "playwright test --project chromium-lighthouse",
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
