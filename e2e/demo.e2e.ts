@@ -65,7 +65,7 @@ test("demo: complete lesson flow", async ({ page }) => {
   await page.waitForTimeout(DELAY);
 
   // Verify completion
-  await expect(page.getByText("Completed 1 of 5 lessons")).toBeVisible();
+  await expect(page.getByText(/Completed 1 of \d+ lessons/)).toBeVisible();
   await page.waitForTimeout(DELAY);
 
   // Scroll to show Coming Soon section

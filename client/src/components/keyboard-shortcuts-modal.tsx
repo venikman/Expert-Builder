@@ -1,5 +1,6 @@
 import { Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { track } from "@/lib/analytics";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useState } from "react";
 
 interface ShortcutGroup {
   title: string;
@@ -61,8 +63,17 @@ function KeyBadge({ children }: { children: React.ReactNode }) {
 }
 
 export function KeyboardShortcutsModal() {
+  const [open, setOpen] = useState(false);
   return (
-    <Dialog>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (nextOpen) {
+          track("keyboard_shortcuts_opened");
+        }
+      }}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <DialogTrigger asChild>

@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// Code example for the reference drawer in Coding Mode
+export interface CodeExample {
+  title: string;
+  code: string;
+  language: string;
+}
+
 // Lesson type (stored in codebase)
 export interface Lesson {
   id: string;
@@ -15,6 +22,11 @@ export interface Lesson {
   testNames?: string[];
   hints: Record<string, string>;
   order: number;
+  /**
+   * Code examples for the reference drawer in Coding Mode.
+   * These are shown when the user wants to see examples while coding.
+   */
+  codeExamples?: CodeExample[];
 }
 
 export const testResultSchema = z.object({

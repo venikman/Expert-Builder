@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getDistinctId } from "@/lib/analytics";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -12,9 +13,14 @@ export async function apiRequest<T = unknown>(
   url: string,
   data?: unknown | undefined,
 ): Promise<T> {
+  const distinctId = getDistinctId();
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      ...(distinctId ? { "x-ph-distinct-id": distinctId } : {}),
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,8 +35,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const distinctId = getDistinctId();
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      headers: distinctId ? { "x-ph-distinct-id": distinctId } : undefined,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

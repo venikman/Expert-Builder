@@ -11,6 +11,11 @@ roslyn-runner/bin/
 roslyn-runner/obj/
 .fake
 
+# Local env files
+.env
+.env.*
+!.env.example
+
 # Local editor/agent configs
 .vscode/
 .claude/

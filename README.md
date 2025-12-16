@@ -69,7 +69,12 @@ The repo includes a `global.json` that pins the SDK version to ensure CI/CLI pic
    bun install
    ```
 
-2. **Start development server**:
+2. **(Optional) Enable PostHog analytics**:
+   - Copy `.env.example` → `.env`
+   - Set `PUBLIC_POSTHOG_KEY` (and optionally `PUBLIC_POSTHOG_HOST`)
+   - By default we **disable autocapture and session recording** and only send explicit product events (no user code content).
+
+3. **Start development server**:
    ```bash
    bun run dev:all
    ```

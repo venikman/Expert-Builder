@@ -15,6 +15,7 @@ import {
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { readLessonProgress } from "@/lib/progress";
 import { cn } from "@/lib/utils";
+import { track } from "@/lib/analytics";
 import type { Lesson } from "@shared/schema";
 
 // Upcoming patterns from Ploeh blog research - DI & FP patterns for .NET
@@ -109,37 +110,60 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
         )}
       </div>
 
-      <div className="flex items-center gap-1 justify-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={() => onLessonChange(currentLessonIndex - 1)}
-          disabled={!canGoPrev}
-          aria-label="Previous lesson"
-          data-testid="button-prev-lesson"
-        >
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-        </Button>
+      <div className="flex items-center gap-2 justify-center">
+        {/* Lesson Navigation */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              const nextIndex = currentLessonIndex - 1;
+              track("lesson_navigate", {
+                direction: "prev",
+                from_index: currentLessonIndex,
+                to_index: nextIndex,
+                from_lesson_id: currentLesson?.id,
+                to_lesson_id: lessons[nextIndex]?.id,
+              });
+              onLessonChange(nextIndex);
+            }}
+            disabled={!canGoPrev}
+            aria-label="Previous lesson"
+            data-testid="button-prev-lesson"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </Button>
 
-        <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1">
-          <span className="text-xs text-muted-foreground hidden sm:inline">Lesson</span>
-          <Badge variant="secondary" className="font-mono text-xs" data-testid="badge-lesson-number">
-            {currentLessonIndex + 1}/{lessons.length}
-          </Badge>
+          <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1">
+            <span className="text-xs text-muted-foreground hidden sm:inline">Lesson</span>
+            <Badge variant="secondary" className="font-mono text-xs" data-testid="badge-lesson-number">
+              {currentLessonIndex + 1}/{lessons.length}
+            </Badge>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              const nextIndex = currentLessonIndex + 1;
+              track("lesson_navigate", {
+                direction: "next",
+                from_index: currentLessonIndex,
+                to_index: nextIndex,
+                from_lesson_id: currentLesson?.id,
+                to_lesson_id: lessons[nextIndex]?.id,
+              });
+              onLessonChange(nextIndex);
+            }}
+            disabled={!canGoNext}
+            aria-label="Next lesson"
+            data-testid="button-next-lesson"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </Button>
         </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={() => onLessonChange(currentLessonIndex + 1)}
-          disabled={!canGoNext}
-          aria-label="Next lesson"
-          data-testid="button-next-lesson"
-        >
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </Button>
       </div>
 
       <div className="flex items-center justify-end gap-2">
@@ -148,6 +172,10 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
           onOpenChange={(open) => {
             setIsProgressOpen(open);
             if (open) {
+              track("progress_dialog_opened", {
+                lesson_id: currentLesson?.id,
+                lesson_order: currentLesson?.order,
+              });
               setProgressPage(getPageForOrder(currentLesson?.order));
             }
           }}
@@ -253,6 +281,13 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
                               <button
                                 type="button"
                                 onClick={() => {
+                                  track("lesson_selected", {
+                                    from_lesson_id: currentLesson?.id,
+                                    to_lesson_id: lesson.id,
+                                    from_index: currentLessonIndex,
+                                    to_index: index,
+                                    via: "progress_dialog",
+                                  });
                                   onLessonChange(index);
                                   setIsProgressOpen(false);
                                 }}
