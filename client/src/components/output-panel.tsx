@@ -1,5 +1,5 @@
 import { ChevronUp, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConsoleOutput } from "@/components/console-output";
@@ -58,16 +58,16 @@ export function OutputPanel({
           <TabsList className="h-8 bg-transparent gap-1">
             <TabsTrigger
               value="problems"
-              className="data-[state=active]:bg-muted rounded-md px-3 py-1.5 text-sm relative"
+              className="data-active:bg-muted px-3 py-1.5 text-sm relative"
               data-testid="tab-problems"
             >
               Problems
               {(errorCount > 0 || warningCount > 0) && (
                 <span
-                  className={`ml-1.5 inline-flex items-center justify-center text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                  className={`ml-1.5 inline-flex items-center justify-center text-xs font-medium px-1.5 py-0.5 rounded-none border ${
                     errorCount > 0
-                      ? "bg-destructive/20 text-destructive"
-                      : "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+                      ? "bg-destructive/10 text-destructive border-destructive/20"
+                      : "bg-chart-3/10 text-chart-3 border-chart-3/20"
                   }`}
                 >
                   {errorCount > 0 ? errorCount : warningCount}
@@ -76,23 +76,23 @@ export function OutputPanel({
             </TabsTrigger>
             <TabsTrigger
               value="console"
-              className="data-[state=active]:bg-muted rounded-md px-3 py-1.5 text-sm"
+              className="data-active:bg-muted px-3 py-1.5 text-sm"
               data-testid="tab-console"
             >
               Console
             </TabsTrigger>
             <TabsTrigger
               value="tests"
-              className="data-[state=active]:bg-muted rounded-md px-3 py-1.5 text-sm relative"
+              className="data-active:bg-muted px-3 py-1.5 text-sm relative"
               data-testid="tab-tests"
             >
               Tests
               {testResult && (
                 <span
-                  className={`ml-1.5 inline-flex items-center justify-center text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                  className={`ml-1.5 inline-flex items-center justify-center text-xs font-medium px-1.5 py-0.5 rounded-none border ${
                     testResult.passedTests === testResult.totalTests
-                      ? "bg-chart-5/20 text-chart-5"
-                      : "bg-destructive/20 text-destructive"
+                      ? "bg-chart-5/10 text-chart-5 border-chart-5/20"
+                      : "bg-destructive/10 text-destructive border-destructive/20"
                   }`}
                 >
                   {testResult.passedTests}/{testResult.totalTests}
@@ -102,15 +102,17 @@ export function OutputPanel({
           </TabsList>
           {onToggleCollapse && (
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onToggleCollapse}
-                  data-testid="button-toggle-output"
-                >
-                  {isCollapsed ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
+              <TooltipTrigger
+                type="button"
+                className={buttonVariants({ variant: "ghost", size: "icon" })}
+                onClick={onToggleCollapse}
+                data-testid="button-toggle-output"
+              >
+                {isCollapsed ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
               </TooltipTrigger>
               <TooltipContent>{isCollapsed ? "Expand" : "Collapse"}</TooltipContent>
             </Tooltip>

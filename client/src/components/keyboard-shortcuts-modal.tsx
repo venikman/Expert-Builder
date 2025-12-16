@@ -1,12 +1,11 @@
 import { Keyboard } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState } from "react";
@@ -56,7 +55,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
 
 function KeyBadge({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="px-1.5 py-0.5 text-xs font-mono font-medium bg-muted border rounded shadow-sm">
+    <kbd className="inline-flex h-5 items-center justify-center px-2 text-xs font-mono font-medium bg-muted border border-border rounded-none">
       {children}
     </kbd>
   );
@@ -75,17 +74,18 @@ export function KeyboardShortcutsModal() {
       }}
     >
       <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              data-testid="button-keyboard-shortcuts"
-            >
-              <Keyboard className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
+        <TooltipTrigger
+          type="button"
+          className={buttonVariants({
+            variant: "ghost",
+            size: "icon-sm",
+            className: "h-7 w-7",
+          })}
+          onClick={() => setOpen(true)}
+          data-testid="button-keyboard-shortcuts"
+          aria-label="Open keyboard shortcuts"
+        >
+          <Keyboard className="h-4 w-4" />
         </TooltipTrigger>
         <TooltipContent>Keyboard shortcuts</TooltipContent>
       </Tooltip>

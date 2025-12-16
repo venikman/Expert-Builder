@@ -493,20 +493,19 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
             </span>
           )}
           <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={toggleVimMode}
-                aria-label={vimEnabled ? "Disable Vim mode" : "Enable Vim mode"}
-                aria-pressed={vimEnabled}
-                className={`text-xs px-1.5 py-0.5 rounded font-mono font-medium transition-colors ${
-                  vimEnabled
-                    ? "bg-chart-5/20 text-chart-5"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-                data-testid="button-toggle-vim"
-              >
-                VIM
-              </button>
+            <TooltipTrigger
+              type="button"
+              onClick={toggleVimMode}
+              aria-label={vimEnabled ? "Disable Vim mode" : "Enable Vim mode"}
+              aria-pressed={vimEnabled}
+              className={`text-xs px-1.5 py-0.5 rounded font-mono font-medium transition-colors ${
+                vimEnabled
+                  ? "bg-chart-5/20 text-chart-5"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+              data-testid="button-toggle-vim"
+            >
+              VIM
             </TooltipTrigger>
             <TooltipContent>
               {vimEnabled ? "Disable Vim mode" : "Enable Vim mode"}
@@ -515,31 +514,29 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
           {/* Font size controls */}
           <div className="flex items-center gap-0.5 ml-1">
             <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={decreaseFontSize}
-                  disabled={fontSize <= MIN_FONT_SIZE}
-                  aria-label="Decrease font size"
-                  className="p-1 rounded text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                  data-testid="button-decrease-font"
-                >
-                  <Minus className="h-3 w-3" aria-hidden="true" />
-                </button>
+              <TooltipTrigger
+                type="button"
+                onClick={decreaseFontSize}
+                disabled={fontSize <= MIN_FONT_SIZE}
+                aria-label="Decrease font size"
+                className="p-1 rounded text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                data-testid="button-decrease-font"
+              >
+                <Minus className="h-3 w-3" aria-hidden="true" />
               </TooltipTrigger>
               <TooltipContent>Decrease font size</TooltipContent>
             </Tooltip>
             <span className="text-xs text-muted-foreground font-mono w-6 text-center">{fontSize}</span>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={increaseFontSize}
-                  disabled={fontSize >= MAX_FONT_SIZE}
-                  aria-label="Increase font size"
-                  className="p-1 rounded text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                  data-testid="button-increase-font"
-                >
-                  <Plus className="h-3 w-3" aria-hidden="true" />
-                </button>
+              <TooltipTrigger
+                type="button"
+                onClick={increaseFontSize}
+                disabled={fontSize >= MAX_FONT_SIZE}
+                aria-label="Increase font size"
+                className="p-1 rounded text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                data-testid="button-increase-font"
+              >
+                <Plus className="h-3 w-3" aria-hidden="true" />
               </TooltipTrigger>
               <TooltipContent>Increase font size</TooltipContent>
             </Tooltip>
@@ -547,15 +544,14 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
           {/* Reset button */}
           {hasChanges && (
             <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleReset}
-                  aria-label="Reset to original code"
-                  className="p-1 rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-                  data-testid="button-reset-code"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
+              <TooltipTrigger
+                type="button"
+                onClick={handleReset}
+                aria-label="Reset to original code"
+                className="p-1 rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                data-testid="button-reset-code"
+              >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
               </TooltipTrigger>
               <TooltipContent>Reset to original code</TooltipContent>
             </Tooltip>

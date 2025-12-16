@@ -97,7 +97,7 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
   return (
     <footer className="border-t bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70 grid grid-cols-[1fr_auto_1fr] items-center px-4 gap-4 h-12 z-50">
       <div className="flex items-center gap-2 min-w-0">
-        <div className="flex items-center justify-center w-7 h-7 bg-primary rounded-md shrink-0" aria-hidden="true">
+        <div className="flex items-center justify-center w-7 h-7 bg-primary rounded-none shrink-0" aria-hidden="true">
           <Code2 className="h-4 w-4 text-primary-foreground" />
         </div>
         <span className="font-semibold text-sm hidden sm:inline" data-testid="text-app-title">
@@ -135,7 +135,7 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </Button>
 
-          <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1">
+          <div className="flex items-center gap-2 bg-muted/50 rounded-none px-3 py-1">
             <span className="text-xs text-muted-foreground hidden sm:inline">Lesson</span>
             <Badge variant="secondary" className="font-mono text-xs" data-testid="badge-lesson-number">
               {currentLessonIndex + 1}/{lessons.length}
@@ -180,22 +180,20 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
             }
           }}
         >
-          <DialogTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              aria-label="Open lesson progress"
-            >
-              <div className="flex flex-col items-end leading-none">
-                <span className="text-xs text-muted-foreground hidden sm:inline">Progress</span>
-                <span className="text-xs font-mono text-foreground">
-                  {completedCount}/{lessons.length}
-                </span>
-              </div>
-              <div className="w-16 hidden sm:block">
-                <Progress value={percentComplete} className="h-1.5" />
-              </div>
-            </button>
+          <DialogTrigger
+            type="button"
+            className="flex items-center gap-2 rounded-none px-2 py-1 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            aria-label="Open lesson progress"
+          >
+            <div className="flex flex-col items-end leading-none">
+              <span className="text-xs text-muted-foreground hidden sm:inline">Progress</span>
+              <span className="text-xs font-mono text-foreground">
+                {completedCount}/{lessons.length}
+              </span>
+            </div>
+            <div className="w-16 hidden sm:block">
+              <Progress value={percentComplete} className="h-1.5" />
+            </div>
           </DialogTrigger>
           <DialogContent className="max-w-4xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
@@ -234,7 +232,7 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
                             <li
                               key={pattern.title}
                               role="listitem"
-                              className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2 opacity-60"
+                              className="flex items-center gap-2 rounded-none border border-dashed px-3 py-2 opacity-60"
                             >
                               <Lock className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" aria-hidden="true" />
                               <span className="text-xs font-mono text-muted-foreground w-10 shrink-0">
@@ -292,7 +290,7 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
                                   setIsProgressOpen(false);
                                 }}
                                 className={cn(
-                                  "w-full flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                                  "w-full flex items-center justify-between gap-3 rounded-none border px-3 py-2 text-left hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                                   isCurrent && "border-primary/60 bg-primary/5"
                                 )}
                                 aria-label={`Lesson ${index + 1}: ${lesson.title}${completed ? ", completed" : ""}${isCurrent ? ", current" : ""}`}

@@ -398,14 +398,14 @@ export function LessonPage({
             <TabsList className="h-12 w-full bg-transparent">
               <TabsTrigger
                 value="lesson"
-                className="flex-1 data-[state=active]:bg-muted rounded-md"
+                className="flex-1 data-active:bg-muted rounded-none"
                 data-testid="mobile-tab-lesson"
               >
                 Lesson
               </TabsTrigger>
               <TabsTrigger
                 value="editor"
-                className="flex-1 data-[state=active]:bg-muted rounded-md"
+                className="flex-1 data-active:bg-muted rounded-none"
                 data-testid="mobile-tab-editor"
               >
                 Code

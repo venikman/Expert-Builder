@@ -13,9 +13,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { track } from "@/lib/analytics";
 import type { CodeExample } from "@shared/schema";
 
-// Fixed snap points: 200px (peek), 400px (comfortable), expanded
-const snapPoints = [0.25, 0.5, 0.85];
-
 interface CodeReferenceDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,9 +30,6 @@ export function CodeReferenceDrawer({
 }: CodeReferenceDrawerProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [activeSnapPoint, setActiveSnapPoint] = useState<number | string | null>(
-    snapPoints[1]
-  );
 
   useEffect(() => {
     return () => {
@@ -78,9 +72,6 @@ export function CodeReferenceDrawer({
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      snapPoints={snapPoints}
-      activeSnapPoint={activeSnapPoint}
-      setActiveSnapPoint={setActiveSnapPoint}
     >
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader className="flex flex-row items-center justify-between border-b pb-4">
@@ -91,54 +82,56 @@ export function CodeReferenceDrawer({
               — {lessonTitle}
             </span>
           </div>
-          <DrawerClose asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
+          <DrawerClose
+            render={<Button variant="ghost" size="icon" className="h-8 w-8" />}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
           </DrawerClose>
         </DrawerHeader>
 
-        <ScrollArea className="flex-1 px-4 py-4">
-          <div className="space-y-6">
-            {codeExamples.map((example, index) => (
-              <div
-                key={index}
-                className="rounded-lg border bg-card overflow-hidden"
-              >
-                <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
-                  <span className="text-sm font-medium">{example.title}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1.5 text-xs"
-                    onClick={() => copyToClipboard(example.code, index)}
-                  >
-                    {copiedIndex === index ? (
-                      <>
-                        <Check className="h-3 w-3" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3 w-3" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
+        <ScrollArea className="flex-1">
+          <div className="px-4 py-4">
+            <div className="space-y-6">
+              {codeExamples.map((example, index) => (
+                <div
+                  key={index}
+                  className="rounded-none ring-foreground/10 bg-card overflow-hidden ring-1"
+                >
+                  <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
+                    <span className="text-sm font-medium">{example.title}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs"
+                      onClick={() => copyToClipboard(example.code, index)}
+                    >
+                      {copiedIndex === index ? (
+                        <>
+                          <Check className="h-3 w-3" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="p-0">
+                    <Streamdown
+                      mode="static"
+                      shikiTheme={["github-light", "github-dark"]}
+                      controls={{ code: false }}
+                      remarkRehypeOptions={{ allowDangerousHtml: false }}
+                    >
+                      {`\`\`\`${example.language}\n${example.code}\n\`\`\``}
+                    </Streamdown>
+                  </div>
                 </div>
-                <div className="p-0">
-                  <Streamdown
-                    mode="static"
-                    shikiTheme={["github-light", "github-dark"]}
-                    controls={{ code: false }}
-                    remarkRehypeOptions={{ allowDangerousHtml: false }}
-                  >
-                    {`\`\`\`${example.language}\n${example.code}\n\`\`\``}
-                  </Streamdown>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </ScrollArea>
       </DrawerContent>
