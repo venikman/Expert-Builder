@@ -3,7 +3,6 @@ import { render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Suspense, act } from "react";
 import { Header } from "./header";
-import { ThemeProvider } from "@/components/theme-provider";
 
 const lessons: any[] = [
   {
@@ -39,17 +38,15 @@ async function renderHeader(progress: unknown) {
   let rendered!: ReturnType<typeof render>;
   await act(async () => {
     rendered = render(
-      <ThemeProvider defaultTheme="light" storageKey="test-theme">
-        <QueryClientProvider client={queryClient}>
-          <Suspense fallback={null}>
-            <Header
-              lessons={lessons as any}
-              currentLessonIndex={0}
-              onLessonChange={() => {}}
-            />
-          </Suspense>
-        </QueryClientProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <Suspense fallback={null}>
+          <Header
+            lessons={lessons as any}
+            currentLessonIndex={0}
+            onLessonChange={() => {}}
+          />
+        </Suspense>
+      </QueryClientProvider>
     );
   });
   return rendered;

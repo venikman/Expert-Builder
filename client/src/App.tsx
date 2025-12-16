@@ -4,7 +4,6 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/components/theme-provider";
 import Home, { HomeSkeleton } from "@/pages/home";
 import NotFound from "@/pages/not-found";
 
@@ -40,18 +39,16 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="fp-csharp-theme">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <AppErrorBoundary>
-            <Suspense fallback={<HomeSkeleton />}>
-              <Router />
-            </Suspense>
-          </AppErrorBoundary>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <AppErrorBoundary>
+          <Suspense fallback={<HomeSkeleton />}>
+            <Router />
+          </Suspense>
+        </AppErrorBoundary>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 

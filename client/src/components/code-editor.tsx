@@ -5,7 +5,6 @@ import { Play, Send, Loader2, Minus, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useTheme } from "@/components/theme-provider";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { registerCSharpCompletions } from "@/lib/csharp-completions";
 import { apiRequest } from "@/lib/queryClient";
@@ -64,7 +63,6 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   isSubmitting,
   onDiagnosticsChange,
 }, ref) {
-  const { resolvedTheme } = useTheme();
   const [isEditorReady, setIsEditorReady] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -570,7 +568,7 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
           onChange={handleEditorChange}
           beforeMount={handleBeforeMount}
           onMount={handleEditorMount}
-          theme={resolvedTheme === "dark" ? "app-dark" : "app-light"}
+          theme="app-dark"
           options={{
             minimap: { enabled: false },
             fontSize: fontSize,

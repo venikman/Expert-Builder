@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Code2, ChevronLeft, ChevronRight, CheckCircle2, Circle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -292,7 +291,6 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
             </Tabs>
           </DialogContent>
         </Dialog>
-        <ThemeToggle />
       </div>
     </footer>
   );
