@@ -575,6 +575,24 @@ For method overloads, return type is NOT part of the signature.
 
 \`Func<int, int>\` and \`Action<int>\` are completely different types!
 
+### Anti-Pattern: Using \`object\` or \`dynamic\` Instead of Delegates
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Losing type safety
+object transform = new Func<string, string>(s => s.ToUpper());
+var result = ((Func<string, string>)transform)("hello"); // Ugly cast!
+
+// ❌ ANTI-PATTERN: Using dynamic
+dynamic transform = (string s) => s.ToUpper();
+var result = transform("hello"); // No compile-time checking!
+
+// ✅ CORRECT: Use typed delegates
+Func<string, string> transform = s => s.ToUpper();
+var result = transform("hello"); // Type-safe!
+\`\`\`
+
+**Why it's bad:** You lose compile-time type checking, IntelliSense, and refactoring support.
+
 ### Your Task
 
 Create a delegate type \`StringTransform\` that takes a string and returns a string.
@@ -683,6 +701,27 @@ Predicate<string> isEmpty = s => string.IsNullOrEmpty(s);
 Console.WriteLine(isEven(4));     // True
 Console.WriteLine(isEmpty(""));   // True
 \`\`\`
+
+### Anti-Pattern: Misusing Action vs Func
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Using Action when you need a return value
+Action<int> process = n => { var result = n * 2; }; // Result is lost!
+
+// ❌ ANTI-PATTERN: Using Func and ignoring the return value
+Func<int, int> compute = n => n * 2;
+compute(5); // Warning: return value discarded!
+
+// ❌ ANTI-PATTERN: Creating custom delegates when built-ins work
+delegate bool MyPredicate(int x); // Unnecessary! Use Predicate<int>
+
+// ✅ CORRECT: Match delegate type to intent
+Action<int> log = n => Console.WriteLine(n);     // No return needed
+Func<int, int> transform = n => n * 2;           // Returns value
+Predicate<int> check = n => n > 0;               // Returns bool
+\`\`\`
+
+**Why it's bad:** Using wrong delegate types obscures intent and can cause bugs.
 
 ### Your Task
 
@@ -815,6 +854,34 @@ Func<int, int> bad = y => y + x;           // captures x
 Func<int, int> good = static y => y * 2;   // compile error if it captures
 \`\`\`
 
+### Anti-Pattern: The Loop Closure Bug
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Capturing loop variable directly
+var funcs = new List<Func<int>>();
+for (int i = 0; i < 3; i++)
+{
+    funcs.Add(() => i);  // All capture same 'i'!
+}
+// funcs[0](), funcs[1](), funcs[2]() all return 3!
+
+// ❌ ANTI-PATTERN: Capturing expensive objects unnecessarily
+var bigData = LoadHugeDataset();
+Func<int, bool> filter = n => n > 0;  // Accidentally keeps bigData alive!
+
+// ✅ CORRECT: Copy loop variable
+for (int i = 0; i < 3; i++)
+{
+    int copy = i;
+    funcs.Add(() => copy);  // Each captures its own copy
+}
+
+// ✅ CORRECT: Use static lambda if no capture needed
+Func<int, bool> filter = static n => n > 0;  // No captures
+\`\`\`
+
+**Why it's bad:** Loop closure bugs are subtle and cause all lambdas to see the final value. Unnecessary captures cause memory leaks.
+
 ### Your Task
 
 Implement \`CreateMultiplier\` that returns a function which multiplies by a captured value.`,
@@ -915,10 +982,46 @@ ProcessItems(myItems, count => Console.WriteLine($"Processed {count} items"));
 - **Testability:** Pass a mock callback that records calls
 - **Flexibility:** Different callers can handle notifications differently
 
-### Pitfalls
+### Anti-Pattern: Async Void and Unhandled Exceptions
 
-- Don't use \`async void\` callbacks (except event handlers)
-- Avoid capturing large objects in frequently-called callbacks
+\`\`\`csharp
+// ❌ ANTI-PATTERN: async void callback - exceptions crash the app!
+void Process(Action onComplete)
+{
+    // Work...
+    onComplete();
+}
+Process(async () => {
+    await Task.Delay(100);
+    throw new Exception("Oops!"); // Unobserved, crashes process!
+});
+
+// ❌ ANTI-PATTERN: Ignoring callback exceptions
+void NotifyAll(List<Action> callbacks)
+{
+    foreach (var cb in callbacks)
+        cb();  // If one throws, rest are skipped!
+}
+
+// ✅ CORRECT: Use Func<Task> for async callbacks
+void Process(Func<Task> onComplete)
+{
+    // Work...
+    await onComplete();  // Exception properly propagated
+}
+
+// ✅ CORRECT: Handle callback exceptions
+void NotifyAll(List<Action> callbacks)
+{
+    foreach (var cb in callbacks)
+    {
+        try { cb(); }
+        catch (Exception ex) { Log(ex); }
+    }
+}
+\`\`\`
+
+**Why it's bad:** \`async void\` exceptions are unobserved and can crash your process. Unhandled callback exceptions break notification chains.
 
 ### Your Task
 
@@ -1032,6 +1135,41 @@ var total2 = CalculateTotal(100m, fixedFive);  // 95
 - Behavior varies at runtime
 - Multiple algorithms for the same task
 - You want to avoid a class hierarchy
+
+### Anti-Pattern: Hardcoding Strategies
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Hardcoded switch/if-else for strategies
+decimal GetDiscount(string type, decimal amount)
+{
+    return type switch
+    {
+        "percent10" => amount * 0.10m,
+        "fixed5" => 5m,
+        "none" => 0m,
+        _ => 0m  // Must modify code to add new strategies!
+    };
+}
+
+// ❌ ANTI-PATTERN: Null strategy without default
+decimal Calculate(decimal amount, Func<decimal, decimal>? strategy)
+{
+    return amount - strategy(amount);  // NullReferenceException!
+}
+
+// ✅ CORRECT: Accept strategy as parameter
+decimal GetDiscount(decimal amount, Func<decimal, decimal> strategy)
+    => strategy(amount);
+
+// ✅ CORRECT: Provide sensible default
+decimal Calculate(decimal amount, Func<decimal, decimal>? strategy = null)
+{
+    var actualStrategy = strategy ?? (x => 0m);  // Default: no discount
+    return amount - actualStrategy(amount);
+}
+\`\`\`
+
+**Why it's bad:** Hardcoded strategies violate Open/Closed Principle. Adding new strategies requires code changes and recompilation.
 
 ### Your Task
 
@@ -1156,6 +1294,41 @@ public class Pipeline
     }
 }
 \`\`\`
+
+### Anti-Pattern: Forgetting to Call Next
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Forgetting to call next breaks the chain
+app.Use(async (ctx, next) =>
+{
+    Console.WriteLine("Starting");
+    // Forgot await next()! Pipeline stops here!
+});
+
+// ❌ ANTI-PATTERN: Calling next multiple times
+app.Use(async (ctx, next) =>
+{
+    await next();  // First call
+    await next();  // Second call - runs pipeline again!
+});
+
+// ❌ ANTI-PATTERN: Modifying response after next (for headers)
+app.Use(async (ctx, next) =>
+{
+    await next();
+    ctx.Response.Headers.Add("X-Custom", "value");  // Too late! Response started!
+});
+
+// ✅ CORRECT: Always call next exactly once
+app.Use(async (ctx, next) =>
+{
+    Console.WriteLine("Before");
+    await next();  // Continue pipeline
+    Console.WriteLine("After");
+});
+\`\`\`
+
+**Why it's bad:** Not calling \`next\` breaks the pipeline. Calling it multiple times causes duplicate processing. Modifying response after \`next\` may fail.
 
 ### Your Task
 
@@ -1287,6 +1460,33 @@ public static IEnumerable<T> WhereNot<T>(
 var odds = numbers.WhereNot(n => n % 2 == 0);
 \`\`\`
 
+### Anti-Pattern: Multiple Enumeration and Side Effects
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Multiple enumeration of IEnumerable
+IEnumerable<int> query = GetExpensiveData().Where(x => x > 0);
+Console.WriteLine(query.Count());  // Enumerates once
+Console.WriteLine(query.First());  // Enumerates AGAIN!
+
+// ❌ ANTI-PATTERN: Side effects in LINQ predicates
+var count = 0;
+var result = numbers.Where(n => { count++; return n > 0; }); // Side effect!
+
+// ❌ ANTI-PATTERN: Modifying collection during iteration
+foreach (var item in list.Where(x => x.IsOld))
+    list.Remove(item);  // Collection modified exception!
+
+// ✅ CORRECT: Materialize once if needed multiple times
+var data = GetExpensiveData().Where(x => x > 0).ToList();
+Console.WriteLine(data.Count);
+Console.WriteLine(data.First());
+
+// ✅ CORRECT: Keep predicates pure
+var result = numbers.Where(n => n > 0);  // Pure, no side effects
+\`\`\`
+
+**Why it's bad:** Multiple enumeration is wasteful and can cause bugs with non-repeatable sources. Side effects make code unpredictable.
+
 ### Your Task
 
 Implement \`Transform\` that applies a series of transformations to each item.`,
@@ -1410,10 +1610,47 @@ services.AddSingleton<IService>(sp => {
 });
 \`\`\`
 
-### Pitfalls
+### Anti-Pattern: Captive Dependency Problem
 
-- Don't capture \`IServiceProvider\` in singletons and resolve scoped services later
-- Don't do heavy work in factories during startup
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Singleton capturing scoped service
+services.AddSingleton<MySingleton>(sp =>
+{
+    // DbContext is Scoped, but now captured in a Singleton!
+    var db = sp.GetRequiredService<DbContext>();
+    return new MySingleton(db);  // db will be disposed, crashes later!
+});
+
+// ❌ ANTI-PATTERN: Service locator anti-pattern
+services.AddSingleton<MyService>(sp =>
+{
+    return new MyService(sp);  // Stores IServiceProvider, resolves later
+});
+
+// ❌ ANTI-PATTERN: Heavy initialization in factory
+services.AddSingleton<ICache>(sp =>
+{
+    var cache = new Cache();
+    cache.WarmUp();  // Blocks startup for minutes!
+    return cache;
+});
+
+// ✅ CORRECT: Match lifetimes (Scoped uses Scoped)
+services.AddScoped<MyService>(sp =>
+{
+    var db = sp.GetRequiredService<DbContext>();  // Both scoped
+    return new MyService(db);
+});
+
+// ✅ CORRECT: Inject IServiceScopeFactory for deferred resolution
+services.AddSingleton<MyService>(sp =>
+{
+    var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+    return new MyService(scopeFactory);  // Create scope when needed
+});
+\`\`\`
+
+**Why it's bad:** Captive dependencies cause disposed object exceptions. Service locator hides dependencies and makes testing hard.
 
 ### Your Task
 
@@ -1583,6 +1820,42 @@ app.MapGet("/async", async () => {
 });
 \`\`\`
 
+### Anti-Pattern: Ignoring Return Values and Blocking
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: ASP0016 - Return value discarded
+app.MapGet("/bad", () => Task.FromResult("Hello"));  // Returns Task, not string!
+
+// ❌ ANTI-PATTERN: Blocking async in sync handler
+app.MapGet("/blocking", () =>
+{
+    var result = GetDataAsync().Result;  // Blocks thread pool thread!
+    return result;
+});
+
+// ❌ ANTI-PATTERN: Heavy computation without consideration
+app.MapGet("/compute", () =>
+{
+    Thread.Sleep(5000);  // Blocks a thread for 5 seconds!
+    return "Done";
+});
+
+// ✅ CORRECT: Return value directly
+app.MapGet("/good", () => "Hello");
+
+// ✅ CORRECT: Use async/await properly
+app.MapGet("/async", async () =>
+{
+    var result = await GetDataAsync();  // Non-blocking
+    return result;
+});
+
+// ✅ CORRECT: Use Results for explicit responses
+app.MapGet("/explicit", () => Results.Ok("Hello"));
+\`\`\`
+
+**Why it's bad:** Discarded return values confuse readers. Blocking calls (.Result, .Wait()) cause thread pool starvation.
+
 ### Your Task
 
 Simulate the route handler pattern: create a router that maps paths to handlers.`,
@@ -1715,11 +1988,56 @@ public class MyWorker : BackgroundService
 }
 \`\`\`
 
-### Pitfalls
+### Anti-Pattern: Ignoring Cancellation and Exceptions
 
-- **Unobserved exceptions:** Always handle/log exceptions in background work
-- **Lifetime issues:** Create scopes for scoped services in singletons
-- **Forgetting cancellation:** Always respect \`CancellationToken\`
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Ignoring CancellationToken
+protected override async Task ExecuteAsync(CancellationToken ct)
+{
+    while (true)  // Never stops! Ignores ct
+    {
+        await DoWork();
+        await Task.Delay(1000);  // Should pass ct!
+    }
+}
+
+// ❌ ANTI-PATTERN: Swallowing exceptions silently
+while (!ct.IsCancellationRequested)
+{
+    try { await DoWork(ct); }
+    catch { }  // Exceptions disappear into the void!
+}
+
+// ❌ ANTI-PATTERN: Using scoped services without scope
+public class MyWorker : BackgroundService
+{
+    private readonly DbContext _db;  // Injected DbContext is already disposed!
+
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        await _db.Users.ToListAsync();  // ObjectDisposedException!
+    }
+}
+
+// ✅ CORRECT: Respect cancellation token everywhere
+while (!ct.IsCancellationRequested)
+{
+    await DoWork(ct);
+    await Task.Delay(1000, ct);  // Throws on cancellation
+}
+
+// ✅ CORRECT: Log exceptions, continue or stop appropriately
+catch (Exception ex) when (ex is not OperationCanceledException)
+{
+    _logger.LogError(ex, "Background work failed");
+}
+
+// ✅ CORRECT: Create scope for scoped services
+using var scope = _scopeFactory.CreateScope();
+var db = scope.ServiceProvider.GetRequiredService<DbContext>();
+\`\`\`
+
+**Why it's bad:** Ignoring cancellation prevents graceful shutdown. Swallowed exceptions hide bugs. Wrong service lifetimes cause crashes.
 
 ### Your Task
 
@@ -1843,6 +2161,44 @@ app.Use(async (context, next) =>
     await next(context);
 });
 \`\`\`
+
+### Anti-Pattern: Response Body Mistakes
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Writing after response has started
+app.Use(async (ctx, next) =>
+{
+    await next(ctx);  // Response already sent!
+    await ctx.Response.WriteAsync("Extra");  // InvalidOperationException!
+});
+
+// ❌ ANTI-PATTERN: Reading request body multiple times without buffering
+app.Use(async (ctx, next) =>
+{
+    var body1 = await new StreamReader(ctx.Request.Body).ReadToEndAsync();
+    var body2 = await new StreamReader(ctx.Request.Body).ReadToEndAsync();  // Empty!
+    await next(ctx);
+});
+
+// ❌ ANTI-PATTERN: Not checking if response has started
+app.Use(async (ctx, next) =>
+{
+    await next(ctx);
+    ctx.Response.StatusCode = 500;  // May throw if headers already sent!
+});
+
+// ✅ CORRECT: Check HasStarted before modifying response
+if (!context.Response.HasStarted)
+{
+    context.Response.StatusCode = 500;
+}
+
+// ✅ CORRECT: Enable request body buffering
+ctx.Request.EnableBuffering();
+ctx.Request.Body.Position = 0;  // Can now read multiple times
+\`\`\`
+
+**Why it's bad:** Writing to response after it started throws. Request body is forward-only by default. Not checking HasStarted causes runtime errors.
 
 ### Your Task
 
@@ -2011,6 +2367,44 @@ app.Use(async (ctx, next) =>
 // Better: inject via DI in a middleware class
 \`\`\`
 
+### Anti-Pattern: Excessive Allocations in Hot Paths
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: String concatenation in hot path
+app.Use(async (ctx, next) =>
+{
+    var log = "Request to " + ctx.Request.Path + " at " + DateTime.Now;  // Allocates!
+    Console.WriteLine(log);
+    await next(ctx);
+});
+
+// ❌ ANTI-PATTERN: Boxing value types
+app.Use(async (ctx, next) =>
+{
+    object statusCode = ctx.Response.StatusCode;  // Boxing!
+    await next(ctx);
+});
+
+// ❌ ANTI-PATTERN: LINQ in hot paths
+app.Use(async (ctx, next) =>
+{
+    var hasAuth = ctx.Request.Headers.Any(h => h.Key == "Authorization");  // Allocates iterator!
+    await next(ctx);
+});
+
+// ✅ CORRECT: Use string interpolation with LoggerMessage
+[LoggerMessage(Level = LogLevel.Information, Message = "Request to {Path}")]
+static partial void LogRequest(ILogger logger, string path);
+
+// ✅ CORRECT: Avoid boxing
+int statusCode = ctx.Response.StatusCode;
+
+// ✅ CORRECT: Use direct lookup instead of LINQ
+var hasAuth = ctx.Request.Headers.ContainsKey("Authorization");
+\`\`\`
+
+**Why it's bad:** Every allocation adds GC pressure. In hot paths (every request), small allocations multiply into significant overhead.
+
 ### Your Task
 
 Identify and fix performance issues in middleware code.`,
@@ -2123,6 +2517,53 @@ app.MapGet("/users/{id}", (int id) => $"User {id}");
 // Run
 await app.HandleRequest("/hello");
 \`\`\`
+
+### Anti-Pattern: Combining Multiple Bad Practices
+
+\`\`\`csharp
+// ❌ ANTI-PATTERN: Multiple issues in one piece of code
+var app = new MiniApp();
+
+// Issue 1: Capturing scoped service in singleton middleware
+var db = app.Services.Get<DbContext>();
+app.Use(async (ctx, next) =>
+{
+    // Issue 2: Blocking call
+    var users = db.Users.ToList();  // DbContext disposed + blocking!
+
+    // Issue 3: Not calling next in some paths
+    if (users.Count == 0)
+        return;  // Forgot await next()!
+
+    // Issue 4: Loop closure bug
+    foreach (var user in users)
+    {
+        app.MapGet($"/user/{user.Id}", () => user.Name);  // All return last user!
+    }
+
+    await next();
+});
+
+// ✅ CORRECT: Apply all learned patterns properly
+app.Use(async (ctx, next) =>
+{
+    using var scope = app.CreateScope();  // Proper scoping
+    var db = scope.Get<DbContext>();
+
+    var users = await db.Users.ToListAsync();  // Async/await
+
+    await next();  // Always call next (or explicitly short-circuit)
+});
+
+// Register routes outside middleware, capture properly
+foreach (var user in users)
+{
+    var capturedName = user.Name;  // Capture copy
+    app.MapGet($"/user/{user.Id}", () => capturedName);
+}
+\`\`\`
+
+**Why it matters:** Real-world bugs often combine multiple anti-patterns. Recognizing them requires understanding all the HTO patterns.
 
 ### Your Task
 
