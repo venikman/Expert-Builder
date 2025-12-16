@@ -122,14 +122,15 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
               </div>
             </button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Lesson Progress</DialogTitle>
               <DialogDescription>
                 Completed {completedCount} of {lessons.length} lessons
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="grid gap-6 md:grid-cols-2">
               <section>
                 <h3 className="text-sm font-medium text-muted-foreground">Lessons</h3>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2" role="list" aria-label="Lessons">
@@ -199,6 +200,7 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
                   ))}
                 </ul>
               </section>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
