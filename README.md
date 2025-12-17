@@ -160,24 +160,7 @@ Each lesson includes:
 - Lessons are stored as static TypeScript data
 - Hints are provided inline in grading logic
 - Diagnostics come from Roslyn compiler
-
-## Codex Cloud (recommended)
-
-- Setup script (Manual):  
-  ```
-  cd /workspace/Expert-Builder
-  chmod +x tools/codex-cloud/setup.sh
-  ./tools/codex-cloud/setup.sh
-  ```
-- Maintenance script (runs before each task):  
-  ```
-  cd /workspace/Expert-Builder
-  chmod +x tools/codex-cloud/maintenance.sh
-  ./tools/codex-cloud/maintenance.sh
-  ```
-- Container caching: On.  
-- Optional env var to use the prebuilt runner:  
-  `ROSLYN_RUNNER_PATH=/workspace/Expert-Builder/roslyn-runner/bin/Release/net10.0/RoslynRunner`
+- Optional: set `ROSLYN_RUNNER_PATH` to a prebuilt Roslyn runner binary (e.g. `./roslyn-runner/bin/Release/net10.0/RoslynRunner`)
 
 ## License
 

@@ -2,7 +2,7 @@ import { CheckCircle2, XCircle, AlertCircle, Lightbulb, Trophy } from "lucide-re
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import type { SubmissionResult } from "@shared/schema";
 import { useState } from "react";
 
@@ -101,18 +101,19 @@ export function TestResults({ result }: TestResultsProps) {
 
           {result.hint && failedTests.length > 0 && (
             <Collapsible open={isHintOpen} onOpenChange={setIsHintOpen}>
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-2 text-chart-3"
-                  data-testid="button-toggle-hint"
-                >
-                  <Lightbulb className="h-4 w-4" />
-                  {isHintOpen ? "Hide Hint" : "Show Hint"}
-                </Button>
+              <CollapsibleTrigger
+                type="button"
+                className={buttonVariants({
+                  variant: "ghost",
+                  className: "w-fit justify-start gap-2 text-chart-3",
+                })}
+                data-testid="button-toggle-hint"
+              >
+                <Lightbulb className="h-4 w-4" />
+                {isHintOpen ? "Hide Hint" : "Show Hint"}
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="bg-chart-3/10 border border-chart-3/20 rounded-md p-4 mt-2">
+                <div className="bg-chart-3/10 border border-chart-3/20 rounded-none p-4 mt-2">
                   <p className="text-sm text-foreground">{result.hint}</p>
                 </div>
               </CollapsibleContent>

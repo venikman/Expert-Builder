@@ -1,33 +1,26 @@
-import { useToast } from "@/hooks/use-toast"
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/toast"
+"use client"
+
+import type * as React from "react"
+import { Toaster as SonnerToaster } from "sonner"
 
 export function Toaster() {
-  const { toasts } = useToast()
-
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
+    <SonnerToaster
+      theme="dark"
+      richColors
+      closeButton
+      containerAriaLabel="Notifications (F8)"
+      toastOptions={{
+        duration: 8000,
+        style: {
+          // Sonner expects these CSS variables for the base theme.
+          // We map them to our shadcn CSS variables.
+          "--normal-bg": "var(--popover)",
+          "--normal-text": "var(--popover-foreground)",
+          "--normal-border": "var(--border)",
+          "--border-radius": "var(--radius)",
+        } as React.CSSProperties,
+      }}
+    />
   )
 }

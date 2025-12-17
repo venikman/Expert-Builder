@@ -9,7 +9,7 @@ interface LessonContentProps {
 
 export function LessonContent({ lesson }: LessonContentProps) {
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       <div className="p-6 pb-0">
         <h1 className="text-3xl font-bold mb-4" data-testid="text-lesson-heading">
           {lesson.title}
@@ -19,7 +19,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
             <Badge 
               key={index} 
               variant="secondary" 
-              className="rounded-full px-3 py-1 text-xs font-medium"
+              className="px-3 py-1 text-xs font-medium"
               data-testid={`badge-concept-${index}`}
             >
               {tag}
@@ -28,16 +28,18 @@ export function LessonContent({ lesson }: LessonContentProps) {
         </div>
       </div>
       
-      <ScrollArea className="flex-1 px-6 pb-6">
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <Streamdown
-            mode="static"
-            shikiTheme={["github-light", "github-dark"]}
-            className="streamdown-content"
-            remarkRehypeOptions={{ allowDangerousHtml: false }}
-          >
-            {lesson.description}
-          </Streamdown>
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="px-6 pb-6">
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <Streamdown
+              mode="static"
+              shikiTheme={["github-light", "github-dark"]}
+              className="streamdown-content"
+              remarkRehypeOptions={{ allowDangerousHtml: false }}
+            >
+              {lesson.description}
+            </Streamdown>
+          </div>
         </div>
       </ScrollArea>
     </div>
