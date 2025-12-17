@@ -1,18 +1,5 @@
 #!/bin/sh
 set -e
 
-echo "Running pre-merge checks..."
-
-echo "→ Typecheck"
-bun run check
-
-echo "→ Unit/integration tests"
-bun test
-
-echo "→ E2E tests (chromium)"
-bun run test:e2e
-
-echo "→ Lighthouse (chromium)"
-bun run test:e2e:lighthouse
-
-echo "✅ All pre-merge checks passed."
+ROOT="$(git rev-parse --show-toplevel)"
+sh "$ROOT/.githooks/run-checks" pre-merge fast

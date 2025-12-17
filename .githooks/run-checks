@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+HOOK_NAME="${1:-hook}"
+PROFILE="${2:-fast}"
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "Running ${HOOK_NAME} checks..."
+
+echo "→ Typecheck"
+bun run check
+
+echo "→ Unit/integration tests"
+bun test
+
+if [ "$PROFILE" = "full" ]; then
+  echo "→ E2E tests (chromium)"
+  bun run test:e2e
+
+  echo "→ Lighthouse (chromium)"
+  bun run test:e2e:lighthouse
+fi
+
+echo "✅ All ${HOOK_NAME} checks passed."

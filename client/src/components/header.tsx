@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Code2, ChevronLeft, ChevronRight, CheckCircle2, Circle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Progress, ProgressIndicator, ProgressTrack } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -192,7 +192,11 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
               </span>
             </div>
             <div className="w-16 hidden sm:block">
-              <Progress value={percentComplete} className="h-1.5" />
+              <Progress value={percentComplete}>
+                <ProgressTrack className="h-1.5">
+                  <ProgressIndicator />
+                </ProgressTrack>
+              </Progress>
             </div>
           </DialogTrigger>
           <DialogContent className="max-w-4xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
@@ -266,7 +270,11 @@ export function Header({ lessons, currentLessonIndex, onLessonChange }: HeaderPr
                           {counts.done} of {counts.total} completed
                         </div>
                         <div className="w-40 hidden sm:block">
-                          <Progress value={groupPercent} className="h-1.5" />
+                          <Progress value={groupPercent}>
+                            <ProgressTrack className="h-1.5">
+                              <ProgressIndicator />
+                            </ProgressTrack>
+                          </Progress>
                         </div>
                       </div>
 
