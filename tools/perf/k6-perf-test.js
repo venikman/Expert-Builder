@@ -12,6 +12,7 @@ const errorCount = new Counter("errors");
 const BASE_URL = __ENV.BASE_URL || "http://localhost:5050";
 
 export const options = {
+  summaryTrendStats: ["avg", "p(50)", "p(95)", "p(99)", "min", "max"],
   scenarios: {
     // Warm-up scenario
     warmup: {
@@ -31,7 +32,7 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_duration: ["p(95)<1000", "p(99)<2000"], // 95th < 1s, 99th < 2s
+    "http_req_duration{phase:performance}": ["p(95)<1000", "p(99)<2000"], // exclude warmup cold start
     success_rate: ["rate>0.95"], // 95% success rate
     execution_time_ms: ["p(95)<500"], // 95th percentile < 500ms
   },
@@ -99,6 +100,7 @@ export function warmup() {
   const params = {
     headers: { "Content-Type": "application/json" },
     timeout: "30s",
+    tags: { phase: "warmup" },
   };
 
   const res = http.post(`${BASE_URL}/api/execute`, payload, params);
@@ -132,7 +134,7 @@ export function executeTests() {
   const params = {
     headers: { "Content-Type": "application/json" },
     timeout: "30s",
-    tags: { test_case: testCase.name },
+    tags: { phase: "performance", test_case: testCase.name },
   };
 
   const start = Date.now();
@@ -168,15 +170,19 @@ export function executeTests() {
 }
 
 export function handleSummary(data) {
-  const p50 = data.metrics.http_req_duration?.values["p(50)"] || 0;
-  const p95 = data.metrics.http_req_duration?.values["p(95)"] || 0;
-  const p99 = data.metrics.http_req_duration?.values["p(99)"] || 0;
-  const avg = data.metrics.http_req_duration?.values["avg"] || 0;
+  const durationMetric =
+    data.metrics["http_req_duration{phase:performance}"] ||
+    data.metrics.http_req_duration;
+
+  const p50 = durationMetric?.values["p(50)"] ?? durationMetric?.values.med ?? 0;
+  const p95 = durationMetric?.values["p(95)"] ?? 0;
+  const p99 = durationMetric?.values["p(99)"] ?? 0;
+  const avg = durationMetric?.values.avg ?? 0;
   const successPct = (data.metrics.success_rate?.values["rate"] || 0) * 100;
 
   const summary = `
 ═══════════════════════════════════════════════════════════════════════
-  k6 Performance Test Results - ${BASE_URL}
+  k6 Performance Test Results (performance phase) - ${BASE_URL}
 ═══════════════════════════════════════════════════════════════════════
 
   Requests:     ${data.metrics.http_reqs?.values["count"] || 0}
@@ -200,4 +206,3 @@ export function handleSummary(data) {
     stdout: summary,
   };
 }
-
