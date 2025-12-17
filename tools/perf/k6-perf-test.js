@@ -179,7 +179,7 @@ export function handleSummary(data) {
     data.metrics["http_req_duration{phase:performance}"] ||
     data.metrics.http_req_duration;
 
-  const p50 = durationMetric?.values["p(50)"] ?? durationMetric?.values.med ?? 0;
+  const p50 = durationMetric?.values["p(50)"] ?? 0;
   const p95 = durationMetric?.values["p(95)"] ?? 0;
   const p99 = durationMetric?.values["p(99)"] ?? 0;
   const avg = durationMetric?.values.avg ?? 0;
