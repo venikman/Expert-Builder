@@ -2,4 +2,4 @@
 set -e
 
 ROOT="$(git rev-parse --show-toplevel)"
-sh "$ROOT/.githooks/run-checks" pre-commit fast
+sh "$ROOT/.githooks/run-checks" pre-push full
